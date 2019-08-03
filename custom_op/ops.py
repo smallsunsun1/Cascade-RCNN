@@ -5,10 +5,32 @@ from tensorflow import keras
 def batch_normalization(x, is_train=True):
     layer = keras.layers.BatchNormalization()
     y = layer(x, is_train)
-    print(layer.updates)
     for ele in layer.updates:
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, ele)
     return y
+
+
+def group_normalization(x, G=32, esp=1e-5):
+    x = tf.transpose(x, [0, 3, 1, 2])
+    x_shape = tf.shape(x)
+    N = x_shape[0]
+    C = x_shape[1]
+    H = x_shape[2]
+    W = x_shape[3]
+    G = tf.minimum(G, C)
+    x = tf.reshape(x, [-1, G, C // G, H, W])
+    mean, var = tf.nn.moments(x, [2, 3, 4], keepdims=True)
+    x = (x - mean) / tf.sqrt(var + esp)
+    # per channel gamma and beta
+    gamma = tf.Variable(tf.ones(shape=[C]), dtype=tf.float32, name='gamma')
+    beta = tf.Variable(tf.ones(shape=[C]), dtype=tf.float32, name='beta')
+    gamma = tf.reshape(gamma, [1, C, 1, 1])
+    beta = tf.reshape(beta, [1, C, 1, 1])
+
+    output = tf.reshape(x, [-1, C, H, W]) * gamma + beta
+    # tranpose: [bs, c, h, w, c] to [bs, h, w, c] following the paper
+    output = tf.transpose(output, [0, 2, 3, 1])
+    return output
 
 
 def batch_conv(inp, filters):
