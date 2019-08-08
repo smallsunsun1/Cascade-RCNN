@@ -1,5 +1,7 @@
 import tensorflow as tf
+
 from tensorflow import keras
+from .deform_conv import tf_batch_map_offsets
 
 
 def batch_normalization(x, is_train=True):
@@ -13,7 +15,6 @@ def batch_normalization(x, is_train=True):
 def group_normalization(x, G=32, esp=1e-5):
     x = tf.transpose(x, [0, 3, 1, 2])
     x_shape = tf.shape(x)
-    N = x_shape[0]
     C = x_shape[1]
     H = x_shape[2]
     W = x_shape[3]
@@ -79,6 +80,56 @@ def carafe(feature_map, cm, upsample_scale, k_encoder, kernel_size):
     upsample_feature = tf.squeeze(upsample_feature, axis=-1)
     return upsample_feature
 
+
+class DeformableConv(object):
+    def __init__(self, filters, use_seperate_conv=True):
+        self.filters = filters
+        if use_seperate_conv:
+            self.conv_layer = keras.layers.SeparableConv2D(filters=filters * 3, kernel_size=(3, 3), padding='same',
+                                                            use_bias=False)
+        else:
+            self.conv_layer = keras.layers.Conv2D(filters=filters * 3, kernel_size=(3, 3), padding='same',
+                                                         use_bias=False)
+
+    def __call__(self, x):
+        conv_res = self.conv_layer(x)
+        offsets = conv_res[:, :, :, : 2 * self.filters]
+        weights = conv_res[:, :, :, 2 * self.filters :]
+        x_shape = tf.shape(x)
+        x_shape_list = x.get_shape().as_list()
+        x = self._to_bc_h_w(x, x_shape)
+        offsets = self._to_bc_h_w_2(offsets, x_shape)
+        weights = self._to_bc_h_w(weights, x_shape)
+        x_offset = tf_batch_map_offsets(x, offsets)
+        weights = tf.expand_dims(weights, axis=1)
+        weights = self._to_b_h_w_c(weights, x_shape)
+        x_offset = self._to_b_h_w_c(x_offset, x_shape)
+        x_offset = tf.multiply(x_offset, weights)
+        x_offset.set_shape(x_shape_list)
+        return x_offset
+
+    @staticmethod
+    def _to_bc_h_w_2(x, x_shape):
+        """(b, h, w, 2c) -> (b*c, h, w, 2)"""
+        x = tf.transpose(x, [0, 3, 1, 2])
+        x = tf.reshape(x, [x_shape[0], x_shape[3], 2, x_shape[1], x_shape[2]])
+        x = tf.transpose(x, [0, 1, 3, 4, 2])
+        x = tf.reshape(x, [-1, x_shape[1], x_shape[2], 2])
+        return x
+
+    @staticmethod
+    def _to_bc_h_w(x, x_shape):
+        """(b, h, w, c) -> (b*c, h, w)"""
+        x = tf.transpose(x, [0, 3, 1, 2])
+        x = tf.reshape(x, [-1, x_shape[1], x_shape[2]])
+        return x
+
+    @staticmethod
+    def _to_b_h_w_c(x, x_shape):
+        """(b*c, h, w) -> (b, h, w, c)"""
+        x = tf.reshape(x, (-1, x_shape[3], x_shape[1], x_shape[2]))
+        x = tf.transpose(x, [0, 2, 3, 1])
+        return x
 
 
 if __name__ == "__main__":
