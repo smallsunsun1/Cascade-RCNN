@@ -113,8 +113,9 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
         anchor_labels -= value
         return anchor_labels
         # Subsample fg labels: ignore some fg if fg is too many
-    anchor_labels = tf.cond(N > 0, lambda :true_fn(anchor_labels, crowd_boxes),
-                            lambda :anchor_labels)
+
+    anchor_labels = tf.cond(N > 0, lambda: true_fn(anchor_labels, crowd_boxes),
+                            lambda: anchor_labels)
     target_num_fg = int(_C.RPN.BATCH_PER_IM * _C.RPN.FG_RATIO)
     fg_inds, anchor_labels = filter_box_label(anchor_labels, 1, target_num_fg)
     old_num_bg = tf.reduce_sum(tf.cast(tf.equal(anchor_labels, 0), tf.int32))
@@ -125,6 +126,7 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
     anchor_boxes += tf.scatter_nd(indices=tf.cast(tf.expand_dims(fg_inds, -1), tf.int32),
                                   updates=fg_boxes, shape=tf.shape(anchor_boxes))
     return anchor_labels, anchor_boxes
+
 
 def tf_get_rpn_anchor_input(im, boxes, is_crowd):
     """
@@ -141,5 +143,17 @@ def tf_get_rpn_anchor_input(im, boxes, is_crowd):
     all_anchors = tf_get_all_anchors()
     featuremap_anchors_flatten = tf.reshape(all_anchors, [-1, 4])
     inside_ind, inside_anchors = tf_filter_boxes_inside_shape(featuremap_anchors_flatten, tf.shape(im)[:2])
-
-
+    anchor_labels, anchor_gt_boxes = tf_get_anchor_labels(inside_anchors,
+                                                          tf.gather_nd(boxes, tf.where(tf.equal(is_crowd, 0))),
+                                                          tf.gather_nd(boxes, tf.where(tf.equal(is_crowd, 1))))
+    anchorH = tf.shape(all_anchors)[0]
+    anchorW = tf.shape(all_anchors)[1]
+    featuremap_labels = -tf.ones((anchorH * anchorW * _C.RPN.NUM_ANCHOR,), dtype=tf.int32)
+    featuremap_labels += (tf.scatter_nd(tf.cast(tf.expand_dims(inside_ind, axis=-1), tf.int32),
+                                        updates=(anchor_labels + tf.ones_like(anchor_labels)),
+                                        shape=tf.shape(featuremap_labels)))
+    featuremap_labels = tf.reshape(featuremap_labels, (anchorH, anchorW, _C.RPN.NUM_ANCHOR))
+    featuremap_boxes = tf.zeros((anchorH * anchorW * _C.RPN.NUM_ANCHOR, 4), dtype=tf.float32)
+    featuremap_boxes += tf.scatter_nd(tf.cast(tf.expand_dims(inside_ind, axis=-1), tf.int32), updates=anchor_gt_boxes,
+                                      shape=tf.shape(featuremap_boxes))
+    return featuremap_labels, featuremap_boxes

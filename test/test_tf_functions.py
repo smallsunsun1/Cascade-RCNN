@@ -1,5 +1,3 @@
 import tensorflow as tf
+from tensorflow import keras
 
-
-a = tf.ones(shape=[10, ])
-print(tf.unique(a))
