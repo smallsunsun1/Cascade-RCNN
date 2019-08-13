@@ -1,0 +1,7 @@
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/CMakeFiles/rebuild_cache.dir
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/CMakeFiles/edit_cache.dir
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/CMakeFiles/a.dir
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/CMakeFiles/ops.dir
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/solutions/CMakeFiles/rebuild_cache.dir
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/solutions/CMakeFiles/edit_cache.dir
+/Users/sunjiahe/CLionProjects/tf_ops/cmake-build-release/solutions/CMakeFiles/solve.dir

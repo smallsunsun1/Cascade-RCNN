@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/sunjiahe/CLionProjects/tf_ops/solutions/solve.cc
+solve.h
+/Users/sunjiahe/CLionProjects/tf_ops/solutions/solve.h
+
+/Users/sunjiahe/CLionProjects/tf_ops/solutions/solve.h
+vector
+-
+unordered_map
+-
+algorithm
+-
+
