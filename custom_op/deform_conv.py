@@ -95,3 +95,4 @@ def tf_batch_map_offsets(input, offsets):
     mapped_vals = tf_batch_map_coordinates(input, coords)
     return mapped_vals
 
+

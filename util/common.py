@@ -1,5 +1,10 @@
 import tensorflow as tf
 import numpy as np
+import sys
+
+sys.path.append("..")
+
+from config.config import _C
 
 
 def tf_filter_boxes_inside_shape(boxes, shape):
@@ -59,4 +64,15 @@ def filter_boxes_inside_shape(boxes, shape):
                        (boxes[:, 2] <= w) &
                        (boxes[:, 3] <= h))[0]
     return indices, boxes[indices, :]
+
+
+def image_preprocess(image):
+    image = tf.cast(image, tf.float32)
+    mean = _C.PREPROC.PIXEL_MEAN
+    std = np.asarray(_C.PREPROC.PIXEL_STD)
+    image_mean = tf.convert_to_tensor(mean, tf.float32)
+    image_invstd = tf.convert_to_tensor(1.0 / std, dtype=tf.float32)
+    image = (image - image_mean) * image_invstd
+    return image
+
 

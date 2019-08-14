@@ -1,6 +1,6 @@
-import yaml
-import easydict
+import os
 
-file = open("/Users/sunjiahe/PycharmProjects/master_work/config/rcnn_fpn.yaml")
-config = yaml.safe_load(file)
-a = easydict.EasyDict(config)
+a = {}
+a[1] = None
+print(a[1])
+

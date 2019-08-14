@@ -13,6 +13,7 @@ def batch_normalization(x, is_train=True):
 
 
 def group_normalization(x, G=32, esp=1e-5):
+    shape_info = x.get_shape().as_list()
     x = tf.transpose(x, [0, 3, 1, 2])
     x_shape = tf.shape(x)
     C = x_shape[1]
@@ -23,14 +24,15 @@ def group_normalization(x, G=32, esp=1e-5):
     mean, var = tf.nn.moments(x, [2, 3, 4], keepdims=True)
     x = (x - mean) / tf.sqrt(var + esp)
     # per channel gamma and beta
-    gamma = tf.Variable(tf.ones(shape=[C]), dtype=tf.float32, name='gamma')
-    beta = tf.Variable(tf.ones(shape=[C]), dtype=tf.float32, name='beta')
+    gamma = tf.Variable(tf.ones(shape=[shape_info[3]]), dtype=tf.float32, name='gamma')
+    beta = tf.Variable(tf.ones(shape=[shape_info[3]]), dtype=tf.float32, name='beta')
     gamma = tf.reshape(gamma, [1, C, 1, 1])
     beta = tf.reshape(beta, [1, C, 1, 1])
 
     output = tf.reshape(x, [-1, C, H, W]) * gamma + beta
     # tranpose: [bs, c, h, w, c] to [bs, h, w, c] following the paper
     output = tf.transpose(output, [0, 2, 3, 1])
+    output.set_shape(shape_info)
     return output
 
 
@@ -57,13 +59,14 @@ def batch_conv(inp, filters):
 
 def carafe(feature_map, cm, upsample_scale, k_encoder, kernel_size):
     """implementation os ICCV 2019 oral presentation CARAFE module"""
+    static_shape = feature_map.get_shape().as_list()
     f1 = keras.layers.Conv2D(cm, (1, 1), padding="valid")(feature_map)
     encode_feature = keras.layers.Conv2D(upsample_scale * upsample_scale * kernel_size * kernel_size,
                                          (k_encoder, k_encoder), padding="same")(f1)
     encode_feature = tf.nn.depth_to_space(encode_feature, upsample_scale)
     encode_feature = tf.nn.softmax(encode_feature, axis=-1)
     """encode_feature [B x (h x scale) x (w x scale) x (kernel_size * kernel_size)]"""
-    extract_feature = tf.image.extract_image_patches(feature_map, [1, kernel_size, kernel_size, 1],
+    extract_feature = tf.image.extract_patches(feature_map, [1, kernel_size, kernel_size, 1],
                                                      strides=[1, 1, 1, 1], rates=[1, 1, 1, 1], padding="SAME")
     """extract feature [B x h x w x (channel x kernel_size x kernel_size)]"""
     extract_feature = keras.layers.UpSampling2D((upsample_scale, upsample_scale))(extract_feature)
@@ -78,6 +81,11 @@ def carafe(feature_map, cm, upsample_scale, k_encoder, kernel_size):
     encode_feature = tf.expand_dims(encode_feature, axis=-1)
     upsample_feature = tf.matmul(extract_feature, encode_feature)
     upsample_feature = tf.squeeze(upsample_feature, axis=-1)
+    if static_shape[1] is not None:
+        static_shape[1] = static_shape[1] * 2
+    if static_shape[2] is not None:
+        static_shape[2] = static_shape[2] * 2
+    upsample_feature.set_shape([static_shape[0], static_shape[1], static_shape[2], static_shape[3]])
     return upsample_feature
 
 
@@ -133,7 +141,6 @@ class DeformableConv(object):
 
 
 if __name__ == "__main__":
-    tf.enable_eager_execution()
     a = tf.ones(shape=[2, 64, 64, 128])
     print(carafe(a, 32, 3, 3, 3))
 

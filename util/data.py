@@ -1,5 +1,7 @@
 import tensorflow as tf
 import numpy as np
+import sys
+sys.path.append("..")
 
 from config.config import _C
 from .generate_anchors import tf_generate_anchors
@@ -157,3 +159,43 @@ def tf_get_rpn_anchor_input(im, boxes, is_crowd):
     featuremap_boxes += tf.scatter_nd(tf.cast(tf.expand_dims(inside_ind, axis=-1), tf.int32), updates=anchor_gt_boxes,
                                       shape=tf.shape(featuremap_boxes))
     return featuremap_labels, featuremap_boxes
+
+
+def tf_get_multilevel_rpn_anchor_input(im, boxes, is_crowd):
+    """
+
+    :param im: an image
+    :param boxes: nx4, floatbox, gt. shoun't be changed
+    :param is_crowd: n
+    :return:
+        [(fm_labels, fm_boxes)]: Returns a tuple for each FPN level.
+        Each tuple contains the anchor labels and target boxes for each pixel in the featuremap.
+        fm_labels: fHxfWx NUM_ANCHOR_RATIOS
+        fm_boxes: fHxfWx NUM_ANCHOR_RATIOS x4
+    """
+    anchors_per_level = tf_get_all_anchors_fpn()
+    flatten_anchors_per_level = [tf.reshape(k, [-1, 4]) for k in anchors_per_level]
+    all_anchors_flatten = tf.concat(flatten_anchors_per_level, axis=0)
+    inside_ind, inside_anchors = tf_filter_boxes_inside_shape(all_anchors_flatten, tf.shape(im)[:2])
+    anchor_labels, anchor_gt_boxes = tf_get_anchor_labels(inside_anchors,
+                                                          tf.gather_nd(boxes, tf.where(tf.equal(is_crowd, 0))),
+                                                          tf.gather_nd(boxes, tf.where(tf.equal(is_crowd, 1))))
+    num_all_anchors = tf.shape(all_anchors_flatten)[0]
+    all_labels = -tf.ones([num_all_anchors, ], dtype=tf.int32)
+    all_labels += tf.scatter_nd(indices=tf.to_int32(tf.expand_dims(inside_ind, axis=-1)), updates=(anchor_labels + 1),
+                                shape=tf.shape(all_labels))
+    all_boxes = tf.zeros(shape=[num_all_anchors, 4])
+    all_boxes += tf.scatter_nd(indices=tf.to_int32(tf.expand_dims(inside_ind, axis=-1)), updates=anchor_gt_boxes,
+                               shape=tf.shape(all_boxes))
+    start = 0
+    multilevel_inputs = []
+    for level_anchor in anchors_per_level:
+        anchor_shape = tf.shape(level_anchor)[:3]  # FHxFWxNUM_ANCHOR_RATIOS
+        num_anchor_this_level = tf.reduce_prod(anchor_shape)
+        end = start + num_anchor_this_level
+        multilevel_inputs.append((tf.reshape(all_labels[start:end], anchor_shape),
+                                  tf.reshape(all_boxes[start:end, :], tf.concat([anchor_shape, [4, ]], axis=-1))))
+        start = end
+    return multilevel_inputs
+
+

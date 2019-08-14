@@ -1,3 +1,3 @@
 import tensorflow as tf
-from tensorflow import keras
 
+tf.image.crop_and_resize()
