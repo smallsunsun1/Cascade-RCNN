@@ -2,24 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8f461f79-b337-446d-b5df-8b64719050b4" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/model/model_box.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model/model_frcnn.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model/model_rpn.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/master_work.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/master_work.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/rcnn_fpn.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/rcnn_fpn.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/custom_op/deform_conv.py" beforeDir="false" afterPath="$PROJECT_DIR$/custom_op/deform_conv.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/custom_op/ops.py" beforeDir="false" afterPath="$PROJECT_DIR$/custom_op/ops.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/basemodel.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/basemodel.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/model_fpn.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_fpn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_cxx_custom_op.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_cxx_custom_op.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_py_function.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_py_function.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_py_nms.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_py_nms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_tf_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_tf_functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/util/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/common.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/train.record" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/util/create_tf_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/create_tf_record.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/util/data.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/util/data_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/data_loader.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -80,8 +67,8 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.test_py_function">
-    <configuration name="generate_anchors" type="PythonConfigurationType" factoryName="Python" temporary="true">
+  <component name="RunManager" selected="Python.create_tf_record">
+    <configuration name="create_tf_record" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="master_work" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -94,7 +81,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/util/generate_anchors.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/util/create_tf_record.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -193,11 +180,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.create_tf_record" />
         <item itemvalue="Python.test_py_function" />
         <item itemvalue="Python.test_cxx_custom_op" />
         <item itemvalue="Python.test_tf_functions" />
         <item itemvalue="Python.ops" />
-        <item itemvalue="Python.generate_anchors" />
       </list>
     </recent_temporary>
   </component>
@@ -214,7 +201,7 @@
       <workItem from="1564578153959" duration="1355000" />
       <workItem from="1565050305400" duration="22060000" />
       <workItem from="1565441972525" duration="6960000" />
-      <workItem from="1565537162110" duration="44930000" />
+      <workItem from="1565537162110" duration="49691000" />
     </task>
     <servers />
   </component>
@@ -236,8 +223,8 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/master_work$test_tf_functions.coverage" NAME="test_tf_functions Coverage Results" MODIFIED="1565669689340" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
-    <SUITE FILE_PATH="coverage/master_work$create_tf_record.coverage" NAME="create_tf_record Coverage Results" MODIFIED="1565147439375" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/util" />
     <SUITE FILE_PATH="coverage/master_work$generate_anchors.coverage" NAME="generate_anchors Coverage Results" MODIFIED="1565147848396" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/util" />
+    <SUITE FILE_PATH="coverage/master_work$create_tf_record.coverage" NAME="create_tf_record Coverage Results" MODIFIED="1565840277284" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/util" />
     <SUITE FILE_PATH="coverage/master_work$ops.coverage" NAME="ops Coverage Results" MODIFIED="1565586363347" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/custom_op" />
     <SUITE FILE_PATH="coverage/master_work$test_py_function.coverage" NAME="test_py_function Coverage Results" MODIFIED="1565772255492" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
     <SUITE FILE_PATH="coverage/master_work$get_tf_version.coverage" NAME="get_tf_version Coverage Results" MODIFIED="1564578192416" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />

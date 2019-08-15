@@ -1,5 +1,6 @@
 import tensorflow as tf
-import numpy as np
+
+from .data import tf_get_multilevel_rpn_anchor_input, tf_get_rpn_anchor_input
 
 
 def transform_img_and_boxes(image, boxes, target_size, training=True):
@@ -17,7 +18,7 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
     pad_h_bottom = target_h - new_h - pad_h_top
     pad_w_left = (target_w - new_w) // 2
     pad_w_right = target_w - new_w - pad_w_left
-    image = tf.squeeze(tf.image.resize(tf.expand_dims(image, axis=0), [new_h, new_w]), axis=0)
+    image = tf.squeeze(tf.image.resize_bilinear(tf.expand_dims(image, axis=0), [new_h, new_w]), axis=0)
     image = tf.pad(image, [[pad_h_top, pad_h_bottom], [pad_w_left, pad_w_right], [0, 0]])
     box_l = (boxes[:, 0] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w
     box_r = (boxes[:, 2] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w
@@ -49,13 +50,17 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
                                                     lambda: (image, box_l, box_r, box_t, box_b))
         image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
-    boxes = tf.stack([box_l, box_t, box_r, box_b, boxes[:, 4]], axis=1)
+    box_l = box_l * target_w
+    box_r = box_r * target_w
+    box_t = box_t * target_h
+    box_b = box_b * target_w
+    boxes = tf.stack([box_l, box_t, box_r, box_b], axis=1)
     return image, boxes
 
 
 def tf_transform(data, training=True):
     file_data = tf.io.read_file(data["filename"])
-    data["boxes"] = tf.reshape(tf.io.decode_raw(data["boxes"], tf.float32), shape=[-1, 5])
+    data["boxes"] = tf.reshape(tf.io.decode_raw(data["boxes"], tf.float32), shape=[-1, 4])
     image = tf.image.decode_jpeg((file_data, 3))
     shape2d = tf.cast(tf.shape(image)[:2], tf.float32)
     scale = shape2d[1] / shape2d[0]
@@ -63,6 +68,24 @@ def tf_transform(data, training=True):
     new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333)
     target_size = [new_height, new_width]
     data["image"], data["boxes"] = transform_img_and_boxes(image, data["boxes"], target_size, training)
+    data["class"] = tf.reshape(tf.decode_raw(data['class'], tf.int32), shape=[-1])
+    data["is_crowd"] = tf.reshape(tf.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
+    data["image"] = tf.expand_dims(data["image"], axis=0)
+    return data
+
+
+def preprocess(data, fpn_mode=False):
+    if fpn_mode:
+        multilevel_anchor_inputs = tf_get_multilevel_rpn_anchor_input(data['image'], data['boxes'],
+                                                                      data['is_crowd'])
+        for i, (anchor_labels, anchor_boxes) in enumerate(multilevel_anchor_inputs):
+            data['anchor_labels_lvl{}'.format(i + 2)] = anchor_labels
+            data['anchor_boxes_lvl{}'.format(i + 2)] = anchor_boxes
+    else:
+        data["anchor_labels"], data['anchor_boxes'] = tf_get_rpn_anchor_input(data['image'], data['boxes'],
+                                                                              data['is_crowd'])
+    data['boxes'] = tf.gather_nd(data['boxes'], tf.where(tf.equal(data['is_crowd'], 0)))
+    data['gt_labels'] = tf.gather_nd(data['class'], tf.where(tf.equal(data['is_crowd'], 0)))
     return data
 
 
@@ -70,8 +93,13 @@ def input_fn(filenames, training=True):
     dataset = tf.data.TFRecordDataset(filenames, num_parallel_reads=4)
     dataset = dataset.map(
         lambda x: tf.io.parse_single_example(x, features={"filename": tf.io.FixedLenFeature([], tf.string),
-                                                          "boxes": tf.io.FixedLenFeature([], tf.string)}))
-    dataset = dataset.map(lambda x: tf_transform(x, training))
+                                                          "boxes": tf.io.FixedLenFeature([], tf.string),
+                                                          "class": tf.io.FixedLenFeature([], tf.string),
+                                                          "is_crowd": tf.io.FixedLenFeature([], tf.string)}),
+        num_parallel_calls=10)
+    if training:
+        dataset = dataset.apply(tf.data.experimental.shuffle_and_repeat(1000))
+    dataset = dataset.map(lambda x: tf_transform(x, training), 10)
+    dataset = dataset.map(lambda x: preprocess(x, False), 10)
+    dataset = dataset.prefetch(-1)
     return dataset
-
-

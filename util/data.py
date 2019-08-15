@@ -55,7 +55,6 @@ def tf_get_all_anchors_fpn(strides=(4, 8, 16, 32, 64), sizes=(32, 64, 128, 256, 
     return foas
 
 
-@tf.function
 def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
     """
         Label each anchor as fg/bg/ignore.
