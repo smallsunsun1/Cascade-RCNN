@@ -157,6 +157,7 @@ def tf_get_rpn_anchor_input(im, boxes, is_crowd):
     featuremap_boxes = tf.zeros((anchorH * anchorW * _C.RPN.NUM_ANCHOR, 4), dtype=tf.float32)
     featuremap_boxes += tf.scatter_nd(tf.cast(tf.expand_dims(inside_ind, axis=-1), tf.int32), updates=anchor_gt_boxes,
                                       shape=tf.shape(featuremap_boxes))
+    featuremap_boxes = tf.reshape(featuremap_boxes, (anchorH, anchorW, _C.RPN.NUM_ANCHOR, 4))
     return featuremap_labels, featuremap_boxes
 
 

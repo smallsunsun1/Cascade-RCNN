@@ -21,7 +21,7 @@ def group_normalization(x, G=32, esp=1e-5):
     W = x_shape[3]
     G = tf.minimum(G, C)
     x = tf.reshape(x, [-1, G, C // G, H, W])
-    mean, var = tf.nn.moments(x, [2, 3, 4], keepdims=True)
+    mean, var = tf.nn.moments(x, [2, 3, 4], keep_dims=True)
     x = (x - mean) / tf.sqrt(var + esp)
     # per channel gamma and beta
     gamma = tf.Variable(tf.ones(shape=[shape_info[3]]), dtype=tf.float32, name='gamma')

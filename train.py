@@ -53,11 +53,14 @@ def resnet_c4_model_fn(features, labels, mode, params):
         image_shape2d,
         _C.RPN.TRAIN_PRE_NMS_TOPK if mode == tf.estimator.ModeKeys.TRAIN else _C.RPN.TEST_PRE_NMS_TOPK,
         _C.RPN.TRAIN_POST_NMS_TOPK if mode == tf.estimator.ModeKeys.TRAIN else _C.RPN.TEST_POST_NMS_TOPK)
+    print(proposals.shape)
     proposals = BoxProposals(proposals)
     if mode != tf.estimator.ModeKeys.PREDICT:
         rpn_loss = rpn_losses(anchors.gt_labels, anchors.encoded_gt_boxes(), rpn_label_logits, rpn_box_logits)
-        targets = [features[k] for k in ['boxes', 'gt_labels', 'gt_masks'] if k in features.keys()]
-        gt_boxes, gt_labels, *_ = targets
+        # targets = [features[k] for k in ['boxes', 'gt_labels', 'gt_masks'] if k in features.keys()]
+        # gt_boxes, gt_labels, *_ = targets
+        gt_boxes = features['boxes']
+        gt_labels = features['gt_labels']
         proposals = sample_fast_rcnn_targets(proposals.boxes, gt_boxes, gt_labels)
     boxes_on_featuremap = proposals.boxes * (1.0 / _C.RPN.ANCHOR_STRIDE)
     roi_resized = roi_align(featuremap, boxes_on_featuremap, resolution)
@@ -76,12 +79,12 @@ def resnet_c4_model_fn(features, labels, mode, params):
     final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
-        trainable_weights = tf.trainable_variables()
-        weight_loss = 0.0
-        for i, ele in enumerate(trainable_weights):
-            if re.search('.*/kernel', ele.name):
-                weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
-        total_cost = tf.add_n(rpn_loss + all_loss + [weight_loss], 'total_cost')
+        # trainable_weights = tf.trainable_variables()
+        # weight_loss = 0.0
+        # for i, ele in enumerate(trainable_weights):
+        #     if re.search('.*/kernel', ele.name):
+        #         weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
+        total_cost = tf.add_n(rpn_loss + all_loss, 'total_cost')
         tf.summary.scalar('total_cost', total_cost)
         if is_train:
             learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
@@ -99,20 +102,13 @@ def resnet_c4_model_fn(features, labels, mode, params):
                        'scores': final_scores}
         return tf.estimator.EstimatorSpec(mode, predictions)
 
-
-
-
-
-
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default='rpn', help='training_model')
     parser.add_argument('--model_dir', default='./rpn_model', help='where to store the model')
-    parser.add_argument("--train_filename", default="./train.txt", help='train filename')
-    parser.add_argument("--eval_filename", default="./eval.txt", help='eval filename')
-    parser.add_argument("--gpus", default=1, help='num_of_gpus')
+    parser.add_argument("--train_filename", default="/home/admin-seu/sss/master_work/data/train.record", help='train filename')
+    parser.add_argument("--eval_filename", default="/home/admin-seu/sss/master_work/data/train.record", help='eval filename')
+    parser.add_argument("--gpus", default=2, help='num_of_gpus')
     args = parser.parse_args()
 
     params = {}
@@ -131,10 +127,17 @@ if __name__ == "__main__":
         session_configs = tf.ConfigProto(allow_soft_placement=True)
         session_configs.gpu_options.allow_growth = True
         config = tf.estimator.RunConfig(train_distribute=strategy, session_config=session_configs,
-                                        log_step_count_steps=100, save_checkpoints_steps=5000,
+                                        log_step_count_steps=20, save_checkpoints_steps=5000,
                                         eval_distribute=strategy, save_summary_steps=500)
         estimator = tf.estimator.Estimator(resnet_c4_model_fn, args.model_dir, config,
                                            params)
+    else:
+        config = tf.estimator.RunConfig(save_checkpoints_steps=5000, save_summary_steps=500, log_step_count_steps=100)
+        estimator = tf.estimator.Estimator(resnet_c4_model_fn, args.model_fir, config,
+                                           params)
+    train_spec = tf.estimator.TrainSpec(lambda :input_fn(args.train_filename), max_steps=100000)
+    eval_spec = tf.estimator.EvalSpec(lambda :input_fn(args.eval_filename), steps=1000)
+    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
 
 

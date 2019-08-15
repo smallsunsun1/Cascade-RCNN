@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow as tf
 import sys
 
 sys.path.append("..")
@@ -49,8 +50,8 @@ def proposal_metrics(iou):
     mean_best_iou = tf.reduce_mean(best_iou)
     tf.summary.scalar('mean_best_iou', mean_best_iou)
     for th in [0.3, 0.5]:
-        recall = tf.truediv(tf.cast(tf.count_nonzero(tf.greater_equal(best_iou, th)), tf.int32),
-                            tf.size(best_iou, tf.int32), name='recall_iou{}'.format(th))
+        recall = tf.truediv(tf.cast(tf.count_nonzero(tf.greater_equal(best_iou, th)), tf.float32),
+                            tf.cast(tf.size(best_iou, out_type=tf.int32), tf.float32), name='recall_iou{}'.format(th))
         tf.summary.scalar(name='recall_iou{}'.format(th), tensor=recall)
 
 
@@ -73,10 +74,11 @@ def sample_fast_rcnn_targets(boxes, gt_boxes, gt_labels):
     proposal_metrics(iou)
     boxes = tf.concat([boxes, gt_boxes], axis=0)
     iou = tf.concat([iou, tf.eye(tf.shape(gt_boxes)[0])], axis=0)
-
     # proposal=n+m from now on
     def sample_fg_bg(iou):
-        fg_mask = tf.reduce_max(iou, axis=1) >= _C.FRCNN.FG_THRESH
+        fg_mask = tf.cond(tf.shape(iou)[1] > 0,
+                          lambda: tf.reduce_max(iou, axis=1) >= _C.FRCNN.FG_THRESH,
+                          lambda: tf.zeros([tf.shape(iou)[0]], dtype=tf.bool))
 
         fg_inds = tf.reshape(tf.where(fg_mask), [-1])
         num_fg = tf.minimum(int(
@@ -95,7 +97,9 @@ def sample_fast_rcnn_targets(boxes, gt_boxes, gt_labels):
 
     fg_inds, bg_inds = sample_fg_bg(iou)
     # fg, bg indices w.r.t proposals
-    best_iou_ind = tf.argmax(iou, axis=1)  # proposal, each in 0~m-1
+    best_iou_ind = tf.cond(tf.shape(iou)[1] > 0,
+                           lambda: tf.argmax(iou, axis=1),  # #proposal, each in 0~m-1
+                           lambda: tf.zeros([tf.shape(iou)[0]], dtype=tf.int64))
     fg_inds_wrt_gt = tf.gather(best_iou_ind, fg_inds)  # num_fg
     all_indices = tf.concat([fg_inds, bg_inds], axis=0)  # indices w.r.t all n+m proposal boxes
     ret_boxes = tf.gather(boxes, all_indices)
@@ -137,7 +141,7 @@ def fastrcnn_losses(labels, label_logits, fg_boxes, fg_box_logits):
     label_loss = tf.losses.sparse_softmax_cross_entropy(labels, label_logits)
     fg_inds = tf.where(tf.greater(labels, 0))[:, 0]
     fg_labels = tf.gather(labels, fg_inds)
-    num_fg = tf.size(fg_inds, tf.int32)
+    num_fg = tf.size(fg_inds, out_type=tf.int32)
     empty_fg = tf.equal(num_fg, 0)
     dim_1 = tf.shape(fg_box_logits)[1]
     cond = tf.greater(dim_1, 1)
@@ -186,11 +190,11 @@ def fastrcnn_predictions(boxes, scores):
         Returns: n boolean, the selection
         """
         prob, box = X
-        output_shape = tf.shape(prob, out_type=tf.float32)
+        output_shape = tf.shape(prob, out_type=tf.int32)
         ids = tf.reshape(tf.where(tf.greater(prob, _C.TEST.RESULT_SCORE_THRESH)), [-1])
         prob = tf.gather(prob, ids)
         box = tf.gather(box, ids)
-        selection = tf.image.non_max_suppression(box, prob, _C.TEST.RESULTS_PER_IM, _C.TEST.FRCNN_NMS_THRESH)
+        selection = tf.image.non_max_suppression(box, prob, _C.TEST.RESULT_PER_IM, _C.TEST.FRCNN_NMS_THRESH)
         selection = tf.gather(ids, selection)
         sorted_selection = sort(selection)
         mask = tf.scatter_nd(tf.cast(tf.expand_dims(sorted_selection, axis=1), tf.int32),
@@ -201,7 +205,7 @@ def fastrcnn_predictions(boxes, scores):
     masks = tf.map_fn(f, (scores, boxes), dtype=tf.bool, parallel_iterations=10)
     selected_indices = tf.where(masks)
     scores = tf.boolean_mask(scores, masks)
-    topk_scores, topk_indices = tf.nn.top_k(scores, tf.minimum(cfg.TEST.RESULTS_PER_IM, tf.size(scores)),
+    topk_scores, topk_indices = tf.nn.top_k(scores, tf.minimum(_C.TEST.RESULT_PER_IM, tf.size(scores)),
                                             sorted=False)
     filtered_selection = tf.gather(selected_indices, topk_indices)
     cat_ids, box_ids = tf.unstack(filtered_selection, axis=1)

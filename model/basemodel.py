@@ -64,7 +64,7 @@ def resnet_group(name, l, block_func, features, count, stride):
 
 def resnet_c4_backbone(image, num_blocks, is_train=True):
     assert len(num_blocks) == 3
-    l = tf.pad(image, [[0, 0], [3, 2], [3, 2], [2, 3], [0, 0]])
+    l = tf.pad(image, [[0, 0], [3, 2], [3, 2], [0, 0]])
     l = keras.layers.Conv2D(64, 7, strides=2, padding='valid', name='conv0')(l)
     l = tf.pad(l, [[0, 0], [1, 0], [1, 0], [0, 0]])
     l = keras.layers.MaxPooling2D((3, 3), strides=2, name='pool0')(l)

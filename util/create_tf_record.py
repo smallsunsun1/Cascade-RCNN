@@ -5,15 +5,17 @@ import re
 
 
 def generate():
-    path = "/Users/sunjiahe/PycharmProjects/master_work/data/train.record"
+    path = "/home/admin-seu/sss/master_work/data/train.record"
     writer = tf.io.TFRecordWriter(path)
-    input_filename = "/Users/sunjiahe/Downloads/Windows/data_with_veri/train.txt"
+    input_filename = "/home/admin-seu/sss/yolo-V3/data/train_total.txt"
     for ele in open(input_filename):
         ele = ele.strip()
         ele = re.sub(",", " ", ele)
         ele = ele.split(" ")
         filename = ele[0]
         boxes = np.asarray(ele[1:]).astype(np.float32).reshape([-1, 5])
+        if np.shape(boxes)[0] == 0:
+            print("no element !")
         classes = boxes[:, 4].astype(np.int32)
         boxes = boxes[:, :4].astype(np.float32)
         is_crowd = np.zeros(shape=[np.shape(boxes)[0], ], dtype=np.int32)
@@ -55,6 +57,6 @@ def input_fn(filenames):
 if __name__ == "__main__":
     tf.enable_eager_execution()
     generate()
-    dataset = input_fn("/Users/sunjiahe/PycharmProjects/master_work/data/train.record")
-    for ele in dataset:
-        print(ele)
+    #dataset = input_fn("/home/admin-seu/sss/master_work/data/train.record")
+    #for ele in dataset:
+    #    print(ele)

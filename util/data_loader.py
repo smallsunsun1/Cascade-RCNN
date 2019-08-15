@@ -5,7 +5,9 @@ from .data import tf_get_multilevel_rpn_anchor_input, tf_get_rpn_anchor_input
 
 def transform_img_and_boxes(image, boxes, target_size, training=True):
     target_h = target_size[0]
+    target_h_float = tf.cast(target_h, tf.float32)
     target_w = target_size[1]
+    target_w_float = tf.cast(target_w, tf.float32)
     image_shape = tf.shape(image)
     img_h = image_shape[0]
     img_w = image_shape[1]
@@ -20,10 +22,10 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
     pad_w_right = target_w - new_w - pad_w_left
     image = tf.squeeze(tf.image.resize_bilinear(tf.expand_dims(image, axis=0), [new_h, new_w]), axis=0)
     image = tf.pad(image, [[pad_h_top, pad_h_bottom], [pad_w_left, pad_w_right], [0, 0]])
-    box_l = (boxes[:, 0] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w
-    box_r = (boxes[:, 2] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w
-    box_t = (boxes[:, 1] * tf.cast(img_h, tf.float32) * scale + tf.cast(pad_h_top, tf.float32)) / target_h
-    box_b = (boxes[:, 3] * tf.cast(img_h, tf.float32) * scale + tf.cast(pad_h_top, tf.float32)) / target_h
+    box_l = (boxes[:, 0] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w_float
+    box_r = (boxes[:, 2] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w_float
+    box_t = (boxes[:, 1] * tf.cast(img_h, tf.float32) * scale + tf.cast(pad_h_top, tf.float32)) / target_h_float
+    box_b = (boxes[:, 3] * tf.cast(img_h, tf.float32) * scale + tf.cast(pad_h_top, tf.float32)) / target_h_float
     if training:
         p1 = tf.random.uniform([], 0, 10)
         p2 = tf.random.uniform([], 0, 10)
@@ -50,10 +52,10 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
                                                     lambda: (image, box_l, box_r, box_t, box_b))
         image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
-    box_l = box_l * target_w
-    box_r = box_r * target_w
-    box_t = box_t * target_h
-    box_b = box_b * target_w
+    box_l = box_l * target_w_float
+    box_r = box_r * target_w_float
+    box_t = box_t * target_h_float
+    box_b = box_b * target_w_float
     boxes = tf.stack([box_l, box_t, box_r, box_b], axis=1)
     return image, boxes
 
@@ -61,14 +63,18 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
 def tf_transform(data, training=True):
     file_data = tf.io.read_file(data["filename"])
     data["boxes"] = tf.reshape(tf.io.decode_raw(data["boxes"], tf.float32), shape=[-1, 4])
-    image = tf.image.decode_jpeg((file_data, 3))
+    image = tf.image.decode_jpeg(file_data, 3)
     shape2d = tf.cast(tf.shape(image)[:2], tf.float32)
     scale = shape2d[1] / shape2d[0]
-    new_height = tf.random.uniform([], 600, 800, tf.int32)
-    new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333)
+    # new_height = tf.random.uniform([], 600, 800, tf.int32)
+    # new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333)
+    # new_height = tf.random.uniform([], 600, 1333, tf.int32) // 32 * 32
+    # new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333) // 32 * 32
+    new_height = 720
+    new_width = 720
     target_size = [new_height, new_width]
     data["image"], data["boxes"] = transform_img_and_boxes(image, data["boxes"], target_size, training)
-    data["class"] = tf.reshape(tf.decode_raw(data['class'], tf.int32), shape=[-1])
+    data["class"] = tf.reshape(tf.decode_raw(data['class'], tf.int32), shape=[-1]) + 1
     data["is_crowd"] = tf.reshape(tf.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
     data["image"] = tf.expand_dims(data["image"], axis=0)
     return data
@@ -103,3 +109,6 @@ def input_fn(filenames, training=True):
     dataset = dataset.map(lambda x: preprocess(x, False), 10)
     dataset = dataset.prefetch(-1)
     return dataset
+
+
+
