@@ -169,6 +169,27 @@ def fastrcnn_losses(labels, label_logits, fg_boxes, fg_box_logits):
     return [label_loss, box_loss]
 
 
+def fastrcnn_predictions_v2(boxes, score):
+    """
+    Generate final results from predictions of all proposals.
+    :param boxes: nxclassx4 float32
+    :param score:  nxclass
+    :return:
+        boxes:
+        scores:
+        labels:
+    """
+    boxes = tf.expand_dims(boxes[:, 1:, :], axis=0)
+    score = tf.expand_dims(score[:, 1:], axis=0)
+    nmsed_boxes, nmsed_scores, nmsed_classes, valid_detections = tf.image.combined_non_max_suppression(boxes, score,
+                                                                                                       100, 1000,
+                                                                                                       iou_threshold=_C.TEST.FRCNN_NMS_THRESH,
+                                                                                                       score_threshold=0.05,
+                                                                                                       clip_boxes=False)
+    nmsed_classes = tf.add(nmsed_classes, 1)
+    return nmsed_boxes, nmsed_scores, nmsed_classes, valid_detections
+
+
 def fastrcnn_predictions(boxes, scores):
     """
         Generate final results from predictions of all proposals.

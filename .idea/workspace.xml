@@ -2,22 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8f461f79-b337-446d-b5df-8b64719050b4" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/webServers.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dynamic_train.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/rcnn_fpn.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/rcnn_fpn.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/custom_op/ops.py" beforeDir="false" afterPath="$PROJECT_DIR$/custom_op/ops.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/train.record" beforeDir="false" afterPath="$PROJECT_DIR$/data/train.record" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/basemodel.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/basemodel.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/model_frcnn.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_frcnn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/model_rpn.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_rpn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_tf_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_tf_functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/util/create_tf_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/create_tf_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/util/data.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/util/data_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/data_loader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test_py_nms.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_py_nms.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -217,7 +203,7 @@
       <workItem from="1564578153959" duration="1355000" />
       <workItem from="1565050305400" duration="22060000" />
       <workItem from="1565441972525" duration="6960000" />
-      <workItem from="1565537162110" duration="61716000" />
+      <workItem from="1565537162110" duration="74866000" />
     </task>
     <servers />
   </component>

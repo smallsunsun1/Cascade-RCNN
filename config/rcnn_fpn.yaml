@@ -27,7 +27,7 @@ TRAIN:
   WARMUP: 1000
   STEPS_PER_EPOCH: 500
   STARTING_EPOCH: 1
-  LR_SCHEDULE: [240000, 320000, 360000]
+  LR_SCHEDULE: [40000, 240000, 320000]
   EVAL_PERIOD: 25
 
 # preprocessing
@@ -47,7 +47,7 @@ RPN:
   NEGATIVE_ANCHOR_THRESH: 0.3
   FG_RATIO: 0.5 # fg ratio among selected RPN anchors
   BATCH_PER_IM: 256 # total (across FPN levels) number of anchors that are marked valid
-  PROPOSAL_NMS_THRESH: 0.7
+  PROPOSAL_NMS_THRESH: 0.5
   HEAD_DIM: 1024
   TRAIN_PRE_NMS_TOPK: 12000
   TRAIN_POST_NMS_TOPK: 2000
@@ -63,10 +63,10 @@ RPN:
 
 # fastrcnn training
 FRCNN:
-  BATCH_PER_IM: 512
+  BATCH_PER_IM: 6  # original is 512, for now 马赛克训练设置为5
   BBOX_REG_WEIGHTS: [10, 10, 5, 5]
   FG_THRESH: 0.5
-  FG_RATIO: 0.25
+  FG_RATIO: 0.5
 
 # FPN
 FPN:
@@ -93,7 +93,7 @@ CASCADE:
 # testing
 TEST:
   FRCNN_NMS_THRESH: 0.5
-  RESULT_SCORE_THRESH: 0.0001
+  RESULT_SCORE_THRESH: 0.05
   RESULT_SCORE_THRESH_VIS: 0.3
   RESULT_PER_IM: 100
 

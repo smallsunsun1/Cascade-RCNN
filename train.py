@@ -14,10 +14,11 @@ from model.model_rpn import rpn_head, generate_rpn_proposals, rpn_losses
 from model.model_fpn import fpn_model, generate_fpn_proposals, multilevel_roi_align, multilevel_rpn_losses, \
     slice_feature_and_anchors
 from model.model_box import RPNAnchors, clip_boxes, roi_align, decoded_output_boxes
-from model.model_frcnn import BoxProposals, FastRCNNHead, fastrcnn_outputs, fastrcnn_predictions, sample_fast_rcnn_targets
+from model.model_frcnn import BoxProposals, FastRCNNHead, fastrcnn_outputs, fastrcnn_predictions, \
+    sample_fast_rcnn_targets, fastrcnn_predictions_v2
 from util.common import image_preprocess
 from util.data import tf_get_all_anchors, tf_get_all_anchors_fpn
-from util.data_loader import input_fn
+from util.data_loader import input_fn, test_input_fn
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -35,25 +36,27 @@ def resnet_c4_model_fn(features, labels, mode, params):
     learning_rate = params["learning_rate"]
     lr_schedule = params["lr_schedule"]
 
-
     """模型定义部分"""
     image = image_preprocess(features['image'])
     featuremap = resnet_c4_backbone(image, resnet_num_blocks[:3], is_train)
     image_shape2d = tf.shape(image)[1:3]
     rpn_label_logits, rpn_box_logits = rpn_head(featuremap, head_dim, num_anchors)
-    if is_train:
+    if mode != tf.estimator.ModeKeys.PREDICT:
         anchors = RPNAnchors(tf_get_all_anchors(), features['anchor_labels'], features['anchor_boxes'])
     else:
         anchors = RPNAnchors(tf_get_all_anchors(), None, None)
     anchors = anchors.narrow_to(featuremap)
-    pred_boxes_decoded = anchors.decode_logits(rpn_box_logits)  #x1y1x2y2
+    pred_boxes_decoded = anchors.decode_logits(rpn_box_logits)  # x1y1x2y2
     proposals, proposal_scores = generate_rpn_proposals(
         tf.reshape(pred_boxes_decoded, [-1, 4]),
         tf.reshape(rpn_label_logits, [-1]),
         image_shape2d,
         _C.RPN.TRAIN_PRE_NMS_TOPK if mode == tf.estimator.ModeKeys.TRAIN else _C.RPN.TEST_PRE_NMS_TOPK,
         _C.RPN.TRAIN_POST_NMS_TOPK if mode == tf.estimator.ModeKeys.TRAIN else _C.RPN.TEST_POST_NMS_TOPK)
-    print(proposals.shape)
+    # rpn_size = tf.shape(proposals)[0]
+    # rpn_boxes = tf.gather(proposals, tf.where(tf.greater(proposals, 0.5)))
+
+
     proposals = BoxProposals(proposals)
     if mode != tf.estimator.ModeKeys.PREDICT:
         rpn_loss = rpn_losses(anchors.gt_labels, anchors.encoded_gt_boxes(), rpn_label_logits, rpn_box_logits)
@@ -76,7 +79,8 @@ def resnet_c4_model_fn(features, labels, mode, params):
     label_scores = tf.nn.softmax(fastrcnn_label_logits)
     decoded_boxes = decoded_output_boxes(proposals, num_classes, fastrcnn_box_logits, bbox_reg_weights_tensor)
     decoded_boxes = clip_boxes(decoded_boxes, image_shape2d)
-    final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
+    final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
+    # final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
         # trainable_weights = tf.trainable_variables()
@@ -88,7 +92,7 @@ def resnet_c4_model_fn(features, labels, mode, params):
         tf.summary.scalar('total_cost', total_cost)
         if is_train:
             learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
-                                                        values=[learning_rate * i for i in range(len(lr_schedule) + 1)])
+                                                        values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [learning_rate * i for i in range(len(lr_schedule))])
             opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
@@ -97,18 +101,26 @@ def resnet_c4_model_fn(features, labels, mode, params):
         else:
             return tf.estimator.EstimatorSpec(mode, loss=total_cost)
     else:
-        predictions = {'boxes': final_boxes,
-                       'labels': final_labels,
-                       'scores': final_scores}
+        predictions = {'boxes': final_boxes[0, :valid_detections[0]],
+                       'labels': final_labels[0, :valid_detections[0]],
+                       'scores': final_scores[0, :valid_detections[0]],
+                       'image': features['image'],
+                       # 'rpn_boxes': rpn_boxes,
+                       # 'rpn_size': rpn_size,
+                       'valid_detection': valid_detections}
         return tf.estimator.EstimatorSpec(mode, predictions)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default='rpn', help='training_model')
-    parser.add_argument('--model_dir', default='./rpn_model', help='where to store the model')
-    parser.add_argument("--train_filename", default="/home/admin-seu/sss/master_work/data/train.record", help='train filename')
-    parser.add_argument("--eval_filename", default="/home/admin-seu/sss/master_work/data/train.record", help='eval filename')
-    parser.add_argument("--gpus", default=2, help='num_of_gpus')
+    parser.add_argument('--model_dir', default='./rpn_model_v2', help='where to store the model')
+    parser.add_argument("--train_filename", default="/home/admin-seu/sss/master_work/data/train.record",
+                        help='train filename')
+    parser.add_argument("--eval_filename", default="/home/admin-seu/sss/master_work/data/eval.record",
+                        help='eval filename')
+    parser.add_argument("--test_filename", default="/home/admin-seu/sss/yolo-V3/data/test.txt", help="test_filename")
+    parser.add_argument("--gpus", default=3, help='num_of_gpus')
     args = parser.parse_args()
 
     params = {}
@@ -127,18 +139,23 @@ if __name__ == "__main__":
         session_configs = tf.ConfigProto(allow_soft_placement=True)
         session_configs.gpu_options.allow_growth = True
         config = tf.estimator.RunConfig(train_distribute=strategy, session_config=session_configs,
-                                        log_step_count_steps=20, save_checkpoints_steps=5000,
+                                        log_step_count_steps=20, save_checkpoints_steps=3000,
                                         eval_distribute=strategy, save_summary_steps=500)
         estimator = tf.estimator.Estimator(resnet_c4_model_fn, args.model_dir, config,
                                            params)
     else:
-        config = tf.estimator.RunConfig(save_checkpoints_steps=5000, save_summary_steps=500, log_step_count_steps=100)
+        config = tf.estimator.RunConfig(save_checkpoints_steps=3000, save_summary_steps=500, log_step_count_steps=100)
         estimator = tf.estimator.Estimator(resnet_c4_model_fn, args.model_fir, config,
                                            params)
-    train_spec = tf.estimator.TrainSpec(lambda :input_fn(args.train_filename), max_steps=100000)
-    eval_spec = tf.estimator.EvalSpec(lambda :input_fn(args.eval_filename), steps=1000)
+    train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename), max_steps=300000)
+    eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False), steps=1000)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-
-
-
-
+    # res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
+    res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
+    for ele in res:
+        print("boxes: ", ele["boxes"])
+        print("labels: ", ele["labels"])
+        print("scores: ", ele["scores"])
+        # print("rpn_boxes: ", ele["rpn_boxes"])
+        # print("rpn_size: ", ele["rpn_size"])
+        print('valid_detection: ', ele["valid_detection"])

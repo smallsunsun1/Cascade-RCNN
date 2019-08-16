@@ -104,11 +104,29 @@ def input_fn(filenames, training=True):
                                                           "is_crowd": tf.io.FixedLenFeature([], tf.string)}),
         num_parallel_calls=10)
     if training:
-        dataset = dataset.apply(tf.data.experimental.shuffle_and_repeat(1000))
+        dataset = dataset.apply(tf.data.experimental.shuffle_and_repeat(50000))
     dataset = dataset.map(lambda x: tf_transform(x, training), 10)
     dataset = dataset.map(lambda x: preprocess(x, False), 10)
     dataset = dataset.prefetch(-1)
     return dataset
+
+
+def read_img(filename, target_height, target_width):
+    content = tf.io.read_file(filename)
+    image = tf.image.decode_jpeg(content, 3)
+    image = tf.image.resize_image_with_pad(image, target_height, target_width)
+    features = {}
+    features['image'] = tf.expand_dims(image, 0)
+    return features
+
+
+def test_input_fn(filenames, target_height, target_width):
+    dataset = tf.data.TextLineDataset(filenames)
+    dataset = dataset.map(lambda x:read_img(x, target_height, target_width), num_parallel_calls=10)
+    dataset = dataset.prefetch(-1)
+    return dataset
+
+
 
 
 

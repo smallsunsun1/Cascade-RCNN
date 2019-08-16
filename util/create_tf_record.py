@@ -4,10 +4,9 @@ import cv2
 import re
 
 
-def generate():
-    path = "/home/admin-seu/sss/master_work/data/train.record"
+def generate(input_filename, output_filename):
+    path = output_filename
     writer = tf.io.TFRecordWriter(path)
-    input_filename = "/home/admin-seu/sss/yolo-V3/data/train_total.txt"
     for ele in open(input_filename):
         ele = ele.strip()
         ele = re.sub(",", " ", ele)
@@ -56,7 +55,9 @@ def input_fn(filenames):
 
 if __name__ == "__main__":
     tf.enable_eager_execution()
-    generate()
+    input_filenames = "/home/admin-seu/hugh/yolov3-tf2/data_native/eval.txt"
+    output_filenames = "/home/admin-seu/sss/master_work/data/eval.record"
+    generate(input_filenames, output_filenames)
     #dataset = input_fn("/home/admin-seu/sss/master_work/data/train.record")
     #for ele in dataset:
     #    print(ele)
