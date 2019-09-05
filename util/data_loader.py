@@ -76,7 +76,6 @@ def tf_transform(data, training=True):
     data["image"], data["boxes"] = transform_img_and_boxes(image, data["boxes"], target_size, training)
     data["class"] = tf.reshape(tf.decode_raw(data['class'], tf.int32), shape=[-1]) + 1
     data["is_crowd"] = tf.reshape(tf.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
-    data["image"] = tf.expand_dims(data["image"], axis=0)
     return data
 
 
@@ -92,6 +91,7 @@ def preprocess(data, fpn_mode=False):
                                                                               data['is_crowd'])
     data['boxes'] = tf.gather_nd(data['boxes'], tf.where(tf.equal(data['is_crowd'], 0)))
     data['gt_labels'] = tf.gather_nd(data['class'], tf.where(tf.equal(data['is_crowd'], 0)))
+    data["image"] = tf.expand_dims(data["image"], axis=0)
     return data
 
 

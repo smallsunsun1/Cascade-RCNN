@@ -9,11 +9,17 @@ from tensorflow import keras
 from custom_op.ops import group_normalization
 from config.config import _C
 from util.box_ops import tf_area
+from util.generate_anchors import tf_generate_anchors
 from .model_box import roi_align
 from .model_rpn import generate_rpn_proposals, rpn_losses
 
 
 def fpn_model(features):
+    """
+
+    :param features: ([tf.Tensor]): ResNet features c2-c5
+    :return: [tf.Tensor]: FPN features p2-p6
+    """
     num_channel = _C.FPN.NUM_CHANNEL
     use_gn = (_C.FPN.NORM == 'GN')
 
@@ -184,14 +190,6 @@ def generate_fpn_proposals(
     return tf.stop_gradient(proposal_boxes, name='boxes'), \
            tf.stop_gradient(proposal_scores, name='scores')
 
-
-def get_all_anchors_fpn(strides, sizes, ratios, max_size):
-    assert len(strides) == len(sizes)
-    foas = []
-    for stride, size in zip(strides, sizes):
-        foa = get_all_anchors_fpn(stride, (size, ), ratios, max_size)
-        foas.append(foa)
-    return foas
 
 def slice_feature_and_anchors(p23456, anchors):
     for i, stride in enumerate(_C.FPN.ANCHOR_STRIDES):

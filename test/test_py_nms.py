@@ -13,3 +13,5 @@ def py_nms(dets, thresh):
     while order.size > 0:
         i = order[0]
         keep.append(i)
+
+print(2 != 1)

@@ -184,7 +184,7 @@ def fastrcnn_predictions_v2(boxes, score):
     nmsed_boxes, nmsed_scores, nmsed_classes, valid_detections = tf.image.combined_non_max_suppression(boxes, score,
                                                                                                        100, 1000,
                                                                                                        iou_threshold=_C.TEST.FRCNN_NMS_THRESH,
-                                                                                                       score_threshold=0.05,
+                                                                                                       score_threshold=_C.TEST.RESULT_SCORE_THRESH,
                                                                                                        clip_boxes=False)
     nmsed_classes = tf.add(nmsed_classes, 1)
     return nmsed_boxes, nmsed_scores, nmsed_classes, valid_detections

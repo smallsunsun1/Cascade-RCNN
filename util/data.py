@@ -94,9 +94,9 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
     # for each gt, find all those anchors (including ties) that has the max ious with it
     anchors_with_max_iou_per_gt = tf.where(tf.equal(box_ious, ious_max_per_gt))[:, 0]  # NA
     anchor_labels = -tf.ones(shape=[NA, ], dtype=tf.int32)
-    temp = tf.unique(anchors_with_max_iou_per_gt).y
-    anchor_labels += tf.scatter_nd(indices=tf.cast(tf.expand_dims(temp, -1), tf.int32),
-                                   updates=tf.fill(tf.shape(temp), 2), shape=tf.shape(anchor_labels))
+    # temp = tf.unique(anchors_with_max_iou_per_gt).y
+    anchor_labels += tf.scatter_nd(indices=tf.cast(tf.expand_dims(anchors_with_max_iou_per_gt, -1), tf.int32),
+                                   updates=tf.fill(tf.shape(anchors_with_max_iou_per_gt), 2), shape=tf.shape(anchor_labels))
     anchor_labels = tf.where(ious_max_per_anchor >= _C.RPN.POSITIVE_ANCHOR_THRESH, tf.ones_like(anchor_labels),
                              anchor_labels)
     anchor_labels = tf.where(ious_max_per_anchor < _C.RPN.NEGATIVE_ANCHOR_THRESH, tf.zeros_like(anchor_labels),
@@ -114,7 +114,6 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
         anchor_labels -= value
         return anchor_labels
         # Subsample fg labels: ignore some fg if fg is too many
-
     anchor_labels = tf.cond(N > 0, lambda: true_fn(anchor_labels, crowd_boxes),
                             lambda: anchor_labels)
     target_num_fg = int(_C.RPN.BATCH_PER_IM * _C.RPN.FG_RATIO)
