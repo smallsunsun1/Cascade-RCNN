@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 def py_nms(dets, thresh):
     x1 = dets[:, 0]
@@ -14,4 +15,11 @@ def py_nms(dets, thresh):
         i = order[0]
         keep.append(i)
 
-print(2 != 1)
+if __name__ == '__main__':
+    tf.enable_eager_execution()
+    p = [0.2, 0.3, 0.1, 0.4]
+    dist = tf.distributions.Categorical(probs=p)
+    index = dist.sample()
+    value = tf.convert_to_tensor([[720, 720],
+                                  [640, 640]])
+    print(value[index, :])

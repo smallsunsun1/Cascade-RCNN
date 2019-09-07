@@ -1,6 +1,6 @@
 # mode flags
 MODE_MASK: false
-MODE_FPN: false
+MODE_FPN: true
 
 # dataset
 DATA:
@@ -79,7 +79,7 @@ FPN:
   FRCNN_CONV_HEAD_DIM: 256
   FRCNN_FC_HEAD_DIM: 1024
   MRCNN_HEAD_FUNC: "maskrcnn_up4conv_head"
-  CASCADE: false
+  CASCADE: true
 
 # Mask-RCNN
 MRCNN:

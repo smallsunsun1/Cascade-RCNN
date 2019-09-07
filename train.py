@@ -96,7 +96,8 @@ def resnet_c4_model_fn(features, labels, mode, params):
                                                         values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
                                                             learning_rate * (0.1 ** i) for i in
                                                             range(len(lr_schedule))])
-            opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
+            # opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
+            opt = tf.train.AdamOptimizer(learning_rate)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
                 train_op = opt.minimize(total_cost, global_step)
@@ -114,7 +115,7 @@ def resnet_c4_model_fn(features, labels, mode, params):
         return tf.estimator.EstimatorSpec(mode, predictions)
 
 
-def resnet_fpn_model(features, labels, mode, params):
+def resnet_fpn_model_fn(features, labels, mode, params):
     """参数定义部分"""
     is_train = (mode == tf.estimator.ModeKeys.TRAIN)
     resnet_num_blocks = params["RESNET_NUM_BLOCKS"]
@@ -148,52 +149,56 @@ def resnet_fpn_model(features, labels, mode, params):
     multilevel_pred_boxes = [anchor.decode_logits(logits) for anchor, logits in zip(multilevel_anchors, multilevel_box_logits)]
     proposal_boxes, proposal_scores = generate_fpn_proposals(multilevel_pred_boxes, multilevel_label_logits, image_shape2d)
     proposals = BoxProposals(proposal_boxes)
+    gt_boxes = None
+    gt_labels = None
     if mode != tf.estimator.ModeKeys.PREDICT:
         losses = multilevel_rpn_losses(multilevel_anchors, multilevel_label_logits, multilevel_box_logits)
         gt_boxes = features['boxes']
         gt_labels = features['gt_labels']
         proposals = sample_fast_rcnn_targets(proposals.boxes, gt_boxes, gt_labels)
-        fastrcnn_head_func = getattr(model_frcnn, _C.FPN.FRCNN_HEAD_FUNC)
-        if not _C.FPN.CASCADE:
-            roi_feature_fastrcnn = multilevel_roi_align(p23456[:4], proposals.boxes, 7)
-            head_feature = fastrcnn_head_func(roi_feature_fastrcnn)
-            fastrcnn_label_logits, fastrcnn_box_logits = fastrcnn_outputs(head_feature, num_classes)
-            fastrcnn_head = FastRCNNHead(proposals, fastrcnn_box_logits, fastrcnn_label_logits,
+    fastrcnn_head_func = getattr(model_frcnn, _C.FPN.FRCNN_HEAD_FUNC)
+    if not _C.FPN.CASCADE:
+        roi_feature_fastrcnn = multilevel_roi_align(p23456[:4], proposals.boxes, 7)
+        head_feature = fastrcnn_head_func(roi_feature_fastrcnn)
+        fastrcnn_label_logits, fastrcnn_box_logits = fastrcnn_outputs(head_feature, num_classes)
+        fastrcnn_head = FastRCNNHead(proposals, fastrcnn_box_logits, fastrcnn_label_logits,
                                          gt_boxes, tf.convert_to_tensor(bbox_reg_weights, tf.float32))
-        else:
-            def roi_func(boxes):
-                return multilevel_roi_align(features[:4], boxes, 7)
-            fastrcnn_head = CascadeRCNNHead(proposals, roi_func, fastrcnn_head_func,
+    else:
+        def roi_func(boxes):
+            return multilevel_roi_align(p23456[:4], boxes, 7)
+        fastrcnn_head = CascadeRCNNHead(proposals, roi_func, fastrcnn_head_func,
                                             (gt_boxes, gt_labels), image_shape2d, num_classes, mode != tf.estimator.ModeKeys.PREDICT)
+    decoded_boxes = fastrcnn_head.decoded_output_boxes()
+    decoded_boxes = clip_boxes(decoded_boxes, image_shape2d)
+    label_scores = fastrcnn_head.output_scores()
+    final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
+    global_step = tf.train.get_or_create_global_step()
+    if mode != tf.estimator.ModeKeys.PREDICT:
         all_losses = fastrcnn_head.losses()
-        decoded_boxes = fastrcnn_head.decoded_output_boxes()
-        decoded_boxes = clip_boxes(decoded_boxes, image_shape2d)
-        label_scores = fastrcnn_head.output_scores()
-        final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
-        global_step = tf.train.get_or_create_global_step()
-        if mode != tf.estimator.ModeKeys.PREDICT:
-            total_cost = tf.add_n(losses + all_losses, "total_cost")
-            if is_train:
-                learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
-                                                            values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
-                                                                learning_rate * (0.1 ** i) for i in
-                                                                range(len(lr_schedule))])
-                opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
-                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-                with tf.control_dependencies(update_ops):
-                    train_op = opt.minimize(total_cost, global_step)
-                return tf.estimator.EstimatorSpec(mode, loss=total_cost, train_op=train_op)
-            else:
-                return tf.estimator.EstimatorSpec(mode, loss=total_cost)
+        total_cost = tf.add_n(losses + all_losses, "total_cost")
+        if is_train:
+            learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
+                                                        values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
+                                                            learning_rate * (0.1 ** i) for i in
+                                                            range(len(lr_schedule))])
+            # opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
+            opt = tf.train.AdamOptimizer(learning_rate)
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops):
+                train_op = opt.minimize(total_cost, global_step)
+            return tf.estimator.EstimatorSpec(mode, loss=total_cost, train_op=train_op)
         else:
-            predictions = {'boxes': final_boxes[0, :valid_detections[0]],
-                           'labels': final_labels[0, :valid_detections[0]],
-                           'scores': final_scores[0, :valid_detections[0]],
-                           'image': features['image'],
-                           'valid_detection': valid_detections}
-            return tf.estimator.EstimatorSpec(mode, predictions)
+            return tf.estimator.EstimatorSpec(mode, loss=total_cost)
+    else:
+        predictions = {'boxes': final_boxes[0, :valid_detections[0]],
+                       'labels': final_labels[0, :valid_detections[0]],
+                       'scores': final_scores[0, :valid_detections[0]],
+                       'image': features['image'],
+                       'valid_detection': valid_detections}
+        return tf.estimator.EstimatorSpec(mode, predictions)
 
-
+model_dict = {"rpn": resnet_c4_model_fn,
+              "fpn": resnet_fpn_model_fn}
 
 
 if __name__ == "__main__":
@@ -224,16 +229,16 @@ if __name__ == "__main__":
         session_configs = tf.ConfigProto(allow_soft_placement=True)
         session_configs.gpu_options.allow_growth = True
         config = tf.estimator.RunConfig(train_distribute=strategy, session_config=session_configs,
-                                        log_step_count_steps=20, save_checkpoints_steps=3000,
+                                        log_step_count_steps=50, save_checkpoints_steps=3000,
                                         eval_distribute=strategy, save_summary_steps=500)
-        estimator = tf.estimator.Estimator(resnet_c4_model_fn, args.model_dir, config,
+        estimator = tf.estimator.Estimator(model_dict[args.model], args.model_dir, config,
                                            params)
     else:
         config = tf.estimator.RunConfig(save_checkpoints_steps=3000, save_summary_steps=500, log_step_count_steps=100)
-        estimator = tf.estimator.Estimator(resnet_c4_model_fn, args.model_fir, config,
+        estimator = tf.estimator.Estimator(model_dict[args.model], args.model_fir, config,
                                            params)
-    train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename), max_steps=300000)
-    eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False), steps=1000)
+    train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=600000)
+    eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
     res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
@@ -249,3 +254,5 @@ if __name__ == "__main__":
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
         print('valid_detection: ', ele["valid_detection"])
+        if idx == 100:
+            break

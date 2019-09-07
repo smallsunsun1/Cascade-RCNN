@@ -33,7 +33,7 @@ def fpn_model(features):
     if use_gn:
         lat_2345 = [group_normalization(c) for c in lat_2345]
     lat_sum_5432 = []
-    for idx, lat in enumerate(lat_2345):
+    for idx, lat in enumerate(lat_2345[::-1]):
         if idx == 0:
             lat_sum_5432.append(lat)
         else:
@@ -195,4 +195,3 @@ def slice_feature_and_anchors(p23456, anchors):
     for i, stride in enumerate(_C.FPN.ANCHOR_STRIDES):
         with tf.name_scope('FPN_slice_lvl{}'.format(i)):
             anchors[i] = anchors[i].narrow_to(p23456[i])
-
