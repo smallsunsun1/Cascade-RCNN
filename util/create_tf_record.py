@@ -94,9 +94,11 @@ if __name__ == "__main__":
     #tf.enable_eager_execution()
     # input_filenames = "/home/admin-seu/hugh/yolov3-tf2/data_native/eval.txt"
     # input_filenames = "/home/admin-seu/sss/master_work/data/train.txt"
-    input_filenames = "/home/admin-seu/sss/master_work/data/2007_test.txt"
+    input_filenames = "/mnt/WXRG0243/jhsun/Data/2007_test.txt"
+    #input_filenames = "/mnt/WXRG0243/jhsun/Data/train.txt"
     # output_filenames = "/home/admin-seu/sss/master_work/data/eval.record"
-    output_filenames = "/home/admin-seu/sss/master_work/data/eval_voco.tfrecord"
+    #output_filenames = '/mnt/WXRG0243/jhsun/Github/Master_work/data/train_voco.tfrecord'
+    output_filenames = "/mnt/WXRG0243/jhsun/Github/Master_work/data/eval_voco.tfrecord"
     generate_from_voco(input_filenames, output_filenames)
     #dataset = input_fn(output_filenames)
     #for ele in dataset:

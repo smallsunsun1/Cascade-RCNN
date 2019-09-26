@@ -1,6 +1,6 @@
-python train.py --train_filename="/home/admin-seu/sss/master_work/data/train.record" \
-  --eval_filename="/home/admin-seu/sss/master_work/data/eval.record" \
-  --test_filename="/home/admin-seu/sss/yolo-V3/data/test.txt" \
+python train.py --train_filename="/mnt/WXRG0243/jhsun/Github/Master_work/data/train_voco.tfrecord" \
+  --eval_filename="/mnt/WXRG0243/jhsun/Github/Master_work/data/eval_voco.tfrecord" \
+  --test_filename="/mnt/WXRG0243/jhsun/Data/2007_test.txt" \
   --model=fpn \
-  --gpus=2 \
-  --model_dir="./fpn_cascade_masaike_model_v1"
+  --gpus=8 \
+  --model_dir="./fpn_cascade_voc_model_v1"

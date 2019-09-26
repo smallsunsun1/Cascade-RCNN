@@ -95,7 +95,7 @@ def preprocess(data, fpn_mode=False):
     return data
 
 
-def input_fn(filenames, training=True):
+def input_fn(filenames, training=True, fpn_mode=True):
     dataset = tf.data.TFRecordDataset(filenames, num_parallel_reads=4)
     dataset = dataset.map(
         lambda x: tf.io.parse_single_example(x, features={"filename": tf.io.FixedLenFeature([], tf.string),
@@ -106,7 +106,7 @@ def input_fn(filenames, training=True):
     if training:
         dataset = dataset.apply(tf.data.experimental.shuffle_and_repeat(50000))
     dataset = dataset.map(lambda x: tf_transform(x, training), 10)
-    dataset = dataset.map(lambda x: preprocess(x, False), 10)
+    dataset = dataset.map(lambda x: preprocess(x, fpn_mode), 10)
     dataset = dataset.prefetch(-1)
     return dataset
 

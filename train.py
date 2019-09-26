@@ -171,7 +171,8 @@ def resnet_fpn_model_fn(features, labels, mode, params):
     decoded_boxes = fastrcnn_head.decoded_output_boxes()
     decoded_boxes = clip_boxes(decoded_boxes, image_shape2d)
     label_scores = fastrcnn_head.output_scores()
-    final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
+    final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
+    #final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
         all_losses = fastrcnn_head.losses()
@@ -190,11 +191,15 @@ def resnet_fpn_model_fn(features, labels, mode, params):
         else:
             return tf.estimator.EstimatorSpec(mode, loss=total_cost)
     else:
-        predictions = {'boxes': final_boxes[0, :valid_detections[0]],
-                       'labels': final_labels[0, :valid_detections[0]],
-                       'scores': final_scores[0, :valid_detections[0]],
-                       'image': features['image'],
-                       'valid_detection': valid_detections}
+        #predictions = {'boxes': final_boxes[0, :valid_detections[0]],
+        #               'labels': final_labels[0, :valid_detections[0]],
+        #               'scores': final_scores[0, :valid_detections[0]],
+        #               'image': features['image'],
+        #               'valid_detection': valid_detections}
+        predictions = {'boxes': final_boxes,
+                       'labels': final_labels,
+                       'scores': final_scores,
+                       'image': features['image']}
         return tf.estimator.EstimatorSpec(mode, predictions)
 
 model_dict = {"rpn": resnet_c4_model_fn,
@@ -253,6 +258,6 @@ if __name__ == "__main__":
         print("scores: ", ele["scores"])
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
-        print('valid_detection: ', ele["valid_detection"])
+        #print('valid_detection: ', ele["valid_detection"])
         if idx == 100:
             break
