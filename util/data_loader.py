@@ -20,8 +20,9 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
     pad_h_bottom = target_h - new_h - pad_h_top
     pad_w_left = (target_w - new_w) // 2
     pad_w_right = target_w - new_w - pad_w_left
-    image = tf.squeeze(tf.image.resize_bilinear(tf.expand_dims(image, axis=0), [new_h, new_w]), axis=0)
-    image = tf.pad(image, [[pad_h_top, pad_h_bottom], [pad_w_left, pad_w_right], [0, 0]])
+    #image = tf.squeeze(tf.image.resize_bilinear(tf.expand_dims(image, axis=0), [new_h, new_w]), axis=0)
+    #image = tf.pad(image, [[pad_h_top, pad_h_bottom], [pad_w_left, pad_w_right], [0, 0]])
+    image = tf.image.resize_image_with_pad(image, target_h, target_w)
     box_l = (boxes[:, 0] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w_float
     box_r = (boxes[:, 2] * tf.cast(img_w, tf.float32) * scale + tf.cast(pad_w_left, tf.float32)) / target_w_float
     box_t = (boxes[:, 1] * tf.cast(img_h, tf.float32) * scale + tf.cast(pad_h_top, tf.float32)) / target_h_float

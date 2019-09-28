@@ -96,8 +96,8 @@ def resnet_c4_model_fn(features, labels, mode, params):
                                                         values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
                                                             learning_rate * (0.1 ** i) for i in
                                                             range(len(lr_schedule))])
-            # opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
-            opt = tf.train.AdamOptimizer(learning_rate)
+            opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
+            # opt = tf.train.AdamOptimizer(learning_rate)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
                 train_op = opt.minimize(total_cost, global_step)
@@ -182,8 +182,8 @@ def resnet_fpn_model_fn(features, labels, mode, params):
                                                         values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
                                                             learning_rate * (0.1 ** i) for i in
                                                             range(len(lr_schedule))])
-            # opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
-            opt = tf.train.AdamOptimizer(learning_rate)
+            opt = tf.train.MomentumOptimizer(learning_rate, 0.9)
+            # opt = tf.train.AdamOptimizer(learning_rate)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
                 train_op = opt.minimize(total_cost, global_step)
@@ -245,19 +245,19 @@ if __name__ == "__main__":
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=600000)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-    res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
+    #res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
-    for idx, ele in enumerate(res):
-        image = ele["image"][0].astype(np.uint8)
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        for box in ele["boxes"]:
-            cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-        cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
-        print("boxes: ", ele["boxes"])
-        print("labels: ", ele["labels"])
-        print("scores: ", ele["scores"])
+    #for idx, ele in enumerate(res):
+    #    image = ele["image"][0].astype(np.uint8)
+    #    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    #    for box in ele["boxes"]:
+    #        cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
+    #    cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
+    #    print("boxes: ", ele["boxes"])
+    #    print("labels: ", ele["labels"])
+    #    print("scores: ", ele["scores"])
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
         #print('valid_detection: ', ele["valid_detection"])
-        if idx == 100:
-            break
+    #    if idx == 100:
+    #        break
