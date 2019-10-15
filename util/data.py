@@ -77,7 +77,8 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
             res_inds = curr_inds[max_num:]
             labels -= tf.scatter_nd(indices=tf.cast(res_inds, tf.int32), updates=(tf.gather_nd(labels, res_inds) + 1),
                                     shape=tf.shape(labels))
-            return curr_inds[:max_num], labels
+            curr_inds = tf.where(tf.equal(labels, value))
+            return curr_inds, labels
 
         def false_fn(curr_inds, labels):
             return curr_inds, labels
@@ -94,14 +95,19 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
     # for each gt, find all those anchors (including ties) that has the max ious with it
     anchors_with_max_iou_per_gt = tf.where(tf.equal(box_ious, ious_max_per_gt))[:, 0]  # NA
     anchor_labels = -tf.ones(shape=[NA, ], dtype=tf.int32)
-    # temp = tf.unique(anchors_with_max_iou_per_gt).y
-    anchor_labels += tf.scatter_nd(indices=tf.cast(tf.expand_dims(anchors_with_max_iou_per_gt, -1), tf.int32),
-                                   updates=tf.fill(tf.shape(anchors_with_max_iou_per_gt), 2), shape=tf.shape(anchor_labels))
+    temp = tf.unique(anchors_with_max_iou_per_gt).y
+    #tf.print(tf.gather_nd(anchor_labels, tf.where(anchor_labels > 1)))
+    #temp = tf.scatter_nd(indices=tf.cast(tf.expand_dims(anchors_with_max_iou_per_gt, -1), tf.int32),
+    #                                   updates=tf.fill(tf.shape(anchors_with_max_iou_per_gt), 2), shape=tf.shape(anchor_labels))
+    #tf.print(tf.gather_nd(temp, tf.where(temp > 2)))
+    anchor_labels += tf.scatter_nd(indices=tf.cast(tf.expand_dims(temp, -1), tf.int32),
+                                   updates=tf.fill(tf.shape(temp), 2), shape=tf.shape(anchor_labels))
+    #tf.print(tf.gather_nd(anchor_labels, tf.where(anchor_labels > 1)))
     anchor_labels = tf.where(ious_max_per_anchor >= _C.RPN.POSITIVE_ANCHOR_THRESH, tf.ones_like(anchor_labels),
                              anchor_labels)
     anchor_labels = tf.where(ious_max_per_anchor < _C.RPN.NEGATIVE_ANCHOR_THRESH, tf.zeros_like(anchor_labels),
                              anchor_labels)
-
+    #tf.print(tf.gather_nd(anchor_labels, tf.where(anchor_labels > 1)))
     def true_fn(anchor_labels, crowd_boxes):
         cand_inds = tf.where(tf.greater_equal(anchor_labels, 0))
         cand_anchors = tf.gather_nd(anchors, cand_inds)
@@ -119,12 +125,13 @@ def tf_get_anchor_labels(anchors, gt_boxes, crowd_boxes):
     target_num_fg = int(_C.RPN.BATCH_PER_IM * _C.RPN.FG_RATIO)
     fg_inds, anchor_labels = filter_box_label(anchor_labels, 1, target_num_fg)
     old_num_bg = tf.reduce_sum(tf.cast(tf.equal(anchor_labels, 0), tf.int32))
-    target_num_bg = _C.RPN.BATCH_PER_IM - tf.size(fg_inds)
+    target_num_bg = _C.RPN.BATCH_PER_IM - tf.shape(fg_inds)[0]
     _, anchor_labels = filter_box_label(anchor_labels, 0, target_num_bg)
     anchor_boxes = tf.zeros(shape=[NA, 4])
     fg_boxes = tf.gather(gt_boxes, tf.gather(ious_argmax_per_anchor, fg_inds))
     anchor_boxes += tf.scatter_nd(indices=tf.cast(tf.expand_dims(fg_inds, -1), tf.int32),
                                   updates=fg_boxes, shape=tf.shape(anchor_boxes))
+    #tf.print(tf.gather_nd(anchor_labels, tf.where(anchor_labels > 1)))
     return anchor_labels, anchor_boxes
 
 

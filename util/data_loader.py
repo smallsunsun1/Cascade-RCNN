@@ -30,12 +30,14 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
     if training:
         p1 = tf.random.uniform([], 0, 10)
         p2 = tf.random.uniform([], 0, 10)
+        p3 = tf.random.uniform([], 0, 10)
         image = tf.image.random_brightness(image, 0.1)
         image = tf.image.random_contrast(image, 0.1, 0.2)
         image = tf.image.random_hue(image, 0.1)
         image = tf.clip_by_value(image, 0, 255)
         cond1 = tf.greater(p1, 5.0)
         cond2 = tf.greater(p2, 5.0)
+        cond3 = tf.greater(p3, 5.0)
 
         def flip_left_right(image, box_l, box_r, box_t, box_b):
             image = tf.image.flip_left_right(image)
@@ -49,14 +51,26 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
             box_b = 1.0 - box_b
             return image, box_l, box_r, box_b, box_t
 
+        def random_aug(image):
+            image = tf.image.random_brightness(image, 0.01)
+            image = tf.image.random_contrast(image, 0.2, 1.8)
+            image = tf.image.random_hue(image, 0.05)
+            image = tf.clip_by_value(image, 0, 255)
+            return image
+
         image, box_l, box_r, box_t, box_b = tf.cond(cond1, lambda: flip_left_right(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
         image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
+        image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
     box_l = box_l * target_w_float
     box_r = box_r * target_w_float
     box_t = box_t * target_h_float
     box_b = box_b * target_w_float
+    box_l = tf.maximum(1.0, box_l)
+    box_t = tf.maximum(1.0, box_t)
+    box_r = tf.minimum(target_w_float - 1, box_r)
+    box_b = tf.minimum(target_h_float - 1, box_b)
     boxes = tf.stack([box_l, box_t, box_r, box_b], axis=1)
     return image, boxes
 
@@ -66,17 +80,30 @@ def tf_transform(data, training=True):
     data["boxes"] = tf.reshape(tf.io.decode_raw(data["boxes"], tf.float32), shape=[-1, 4])
     image = tf.image.decode_jpeg(file_data, 3)
     shape2d = tf.cast(tf.shape(image)[:2], tf.float32)
+    h = shape2d[0]
+    w = shape2d[1]
     scale = shape2d[1] / shape2d[0]
     # new_height = tf.random.uniform([], 600, 800, tf.int32)
     # new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333)
     # new_height = tf.random.uniform([], 600, 1333, tf.int32) // 32 * 32
     # new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333) // 32 * 32
-    new_height = 720
-    new_width = 720
+    def true_fn(h, w):
+        scale = tf.cast(h / w, tf.float32)
+        new_w = 800.0
+        new_h = new_w * scale
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+    def false_fn(h, w):
+        scale = tf.cast(w / h, tf.float32)
+        new_h = 800.0
+        new_w = new_h * scale
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+    new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(shape2d[0], shape2d[1]), lambda: false_fn(shape2d[0], shape2d[1]))
+    #new_height = 608
+    #new_width = 608
     target_size = [new_height, new_width]
     data["image"], data["boxes"] = transform_img_and_boxes(image, data["boxes"], target_size, training)
-    data["class"] = tf.reshape(tf.decode_raw(data['class'], tf.int32), shape=[-1]) + 1
-    data["is_crowd"] = tf.reshape(tf.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
+    data["class"] = tf.reshape(tf.io.decode_raw(data['class'], tf.int32), shape=[-1]) + 1
+    data["is_crowd"] = tf.reshape(tf.io.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
     return data
 
 
@@ -115,7 +142,22 @@ def input_fn(filenames, training=True, fpn_mode=True):
 def read_img(filename, target_height, target_width):
     content = tf.io.read_file(filename)
     image = tf.image.decode_jpeg(content, 3)
-    image = tf.image.resize_image_with_pad(image, target_height, target_width)
+    image_shape = tf.shape(image)
+    shape2d = image_shape[:2]
+    h = shape2d[0]
+    w = shape2d[1]
+    def true_fn(h, w):
+        scale = tf.cast(h / w, tf.float32)
+        new_w = 800.0
+        new_h = new_w * scale
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+    def false_fn(h, w):
+        scale = tf.cast(w / h, tf.float32)
+        new_h = 800.0
+        new_w = new_h * scale
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+    new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(h, w), lambda: false_fn(h, w))
+    image = tf.image.resize_image_with_pad(image, new_height, new_width)
     features = {}
     features['image'] = tf.expand_dims(image, 0)
     return features

@@ -84,11 +84,11 @@ def resnet_c4_model_fn(features, labels, mode, params):
     # final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
-        # trainable_weights = tf.trainable_variables()
-        # weight_loss = 0.0
-        # for i, ele in enumerate(trainable_weights):
-        #     if re.search('.*/kernel', ele.name):
-        #         weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
+        trainable_weights = tf.trainable_variables()
+        weight_loss = 0.0
+        for i, ele in enumerate(trainable_weights):
+            if re.search('.*/kernel', ele.name):
+                weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
         total_cost = tf.add_n(rpn_loss + all_loss, 'total_cost')
         tf.summary.scalar('total_cost', total_cost)
         if is_train:
@@ -176,7 +176,17 @@ def resnet_fpn_model_fn(features, labels, mode, params):
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
         all_losses = fastrcnn_head.losses()
-        total_cost = tf.add_n(losses + all_losses, "total_cost")
+        #trainable_weights = tf.trainable_variables()
+        #weight_loss = 0.0
+        #for i, ele in enumerate(trainable_weights):
+        #    if re.search('.*/kernel', ele.name):
+        #        weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
+
+        #print_op = tf.print({'rpn_loss': tf.add_n(losses),
+        #                     'frcnn_loss': tf.add_n(all_losses)})
+        #with tf.control_dependencies([print_op]):
+        total_cost = tf.add_n(losses + all_losses, "total_cost") 
+        #total_cost = tf.add(total_cost, weight_loss, 'all_total_cost')
         if is_train:
             learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
                                                         values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
@@ -245,19 +255,19 @@ if __name__ == "__main__":
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=600000)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-    #res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
+    res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
-    #for idx, ele in enumerate(res):
-    #    image = ele["image"][0].astype(np.uint8)
-    #    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    #    for box in ele["boxes"]:
-    #        cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-    #    cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
-    #    print("boxes: ", ele["boxes"])
-    #    print("labels: ", ele["labels"])
-    #    print("scores: ", ele["scores"])
+    for idx, ele in enumerate(res):
+        image = ele["image"][0].astype(np.uint8)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        for box in ele["boxes"]:
+            cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
+        cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
+        print("boxes: ", ele["boxes"])
+        print("labels: ", ele["labels"])
+        print("scores: ", ele["scores"])
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
         #print('valid_detection: ', ele["valid_detection"])
-    #    if idx == 100:
-    #        break
+        if idx == 100:
+            break

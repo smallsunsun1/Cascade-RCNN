@@ -140,7 +140,7 @@ if __name__ == "__main__":
     # output_filenames = "/home/admin-seu/sss/master_work/data/eval.record"
     output_filenames = '/mnt/WXRG0243/jhsun/Github/Master_work/data/train_voco.tfrecord'
     #output_filenames = "/mnt/WXRG0243/jhsun/Github/Master_work/data/eval_voco.tfrecord"
-    generate_from_voco(input_filenames, output_filenames)
+    #generate_from_voco(input_filenames, output_filenames)
 
     #input_filenames = "/mnt/ficuspi/ybkang/data/camp/tutorial_train.list"
     #input_filenames = "/mnt/WXRG0243/jhsun/Github/Master_work/data/tutorial_eval.list"
@@ -148,4 +148,5 @@ if __name__ == "__main__":
     #generate_from_json(input_filenames, output_filenames)
     dataset = input_fn(output_filenames)
     for ele in dataset:
+       print(ele.keys())    
        print(ele['boxes'])

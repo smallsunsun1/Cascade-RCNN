@@ -20,7 +20,7 @@ def rpn_head(feature_map, channel, num_anchors):
     hidden = keras.layers.Conv2D(channel, (3, 3), activation=tf.nn.relu, padding="same")(feature_map)
     label_logits = keras.layers.Conv2D(num_anchors, (1, 1), padding="same", name='class')(hidden)
     box_logits = keras.layers.Conv2D(4 * num_anchors, (1, 1), padding="same", name='box')(hidden)
-    label_logits = tf.squeeze(label_logits)
+    label_logits = tf.squeeze(label_logits, axis=0)
     shp = tf.shape(box_logits)
     box_logits = tf.reshape(box_logits, [shp[1], shp[2], num_anchors, 4])  # fHxfWxNAx4
     return label_logits, box_logits
@@ -68,6 +68,10 @@ def rpn_losses(anchor_labels, anchor_boxes, label_logits, box_logits):
                                     reduction=tf.losses.Reduction.SUM) / delta
     box_loss = box_loss * (1. / _C.RPN.BATCH_PER_IM)
     box_loss = tf.where(tf.equal(nr_pos, 0), placeholder, box_loss)
+    #print_op = tf.print({'label_loss':label_loss, 'box_loss':box_loss})
+    #with tf.control_dependencies([print_op]):
+    label_loss = tf.identity(label_loss)
+    box_loss = tf.identity(box_loss)
     return [label_loss, box_loss]
 
 
