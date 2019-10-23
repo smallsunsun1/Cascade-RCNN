@@ -176,17 +176,17 @@ def resnet_fpn_model_fn(features, labels, mode, params):
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
         all_losses = fastrcnn_head.losses()
-        #trainable_weights = tf.trainable_variables()
-        #weight_loss = 0.0
-        #for i, ele in enumerate(trainable_weights):
-        #    if re.search('.*/kernel', ele.name):
-        #        weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
+        trainable_weights = tf.trainable_variables()
+        weight_loss = 0.0
+        for i, ele in enumerate(trainable_weights):
+            if re.search('.*/kernel', ele.name):
+                weight_loss += tf.reduce_sum(tf.square(ele) * weight_decay)
 
         #print_op = tf.print({'rpn_loss': tf.add_n(losses),
         #                     'frcnn_loss': tf.add_n(all_losses)})
         #with tf.control_dependencies([print_op]):
         total_cost = tf.add_n(losses + all_losses, "total_cost") 
-        #total_cost = tf.add(total_cost, weight_loss, 'all_total_cost')
+        total_cost = tf.add(total_cost, weight_loss, 'all_total_cost')
         if is_train:
             learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
                                                         values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         config = tf.estimator.RunConfig(save_checkpoints_steps=3000, save_summary_steps=500, log_step_count_steps=100)
         estimator = tf.estimator.Estimator(model_dict[args.model], args.model_fir, config,
                                            params)
-    train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=600000)
+    train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=None)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
     res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
