@@ -66,7 +66,7 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
     box_l = box_l * target_w_float
     box_r = box_r * target_w_float
     box_t = box_t * target_h_float
-    box_b = box_b * target_w_float
+    box_b = box_b * target_h_float
     #box_l = tf.maximum(1.0, box_l)
     #box_t = tf.maximum(1.0, box_t)
     #box_r = tf.minimum(target_w_float, box_r)
@@ -151,21 +151,22 @@ def read_img(filename, target_height, target_width):
     h = shape2d[0]
     w = shape2d[1]
     scale = tf.cast(w / h, tf.float32)
+    SHORT_IMAGE_EDGE = 800
     def true_fn(h, w):
         scale = tf.cast(h / w, tf.float32)
         new_w = SHORT_IMAGE_EDGE
-        new_h = new_w * scale
+        new_h = tf.minimum(new_w * scale // 32 * 32, 1280)
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     def false_fn(h, w):
         scale = tf.cast(w / h, tf.float32)
         new_h = SHORT_IMAGE_EDGE
-        new_w = new_h * scale
+        new_w = tf.minimum(new_h * scale // 32 * 32, 1280)
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
-    new_height = target_height
-    new_widtht = target_width
+    #new_height = target_height
+    #new_widtht = target_width
     #new_height = tf.random.uniform([], 600, 800, tf.int32) // 32 * 32
     #new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333) // 32 * 32
-    #new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(h, w), lambda: false_fn(h, w))
+    new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(h, w), lambda: false_fn(h, w))
     image = tf.image.resize_image_with_pad(image, new_height, new_width)
     features = {}
     features['image'] = tf.expand_dims(image, 0)
