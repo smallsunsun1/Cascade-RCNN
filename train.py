@@ -217,6 +217,7 @@ model_dict = {"rpn": resnet_c4_model_fn,
 
 
 if __name__ == "__main__":
+    # tf.enable_eager_execution()
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default='rpn', help='training_model')
     parser.add_argument('--model_dir', default='./rpn_model_v2', help='where to store the model')
@@ -238,6 +239,13 @@ if __name__ == "__main__":
     params["weight_decay"] = _C.TRAIN.WEIGHT_DECAY
     params["learning_rate"] = _C.TRAIN.BASE_LR
     params["lr_schedule"] = [_C.TRAIN.WARMUP] + _C.TRAIN.LR_SCHEDULE
+    dataset = input_fn(args.train_filename, True, _C.MODE_FPN)
+    #for idx, element in enumerate(dataset):
+    #    print(idx)
+    #    print(element)
+    #    if idx == 10:
+    #        break
+
 
     if args.gpus > 0:
         strategy = distribute.MirroredStrategy(num_gpus=args.gpus)
@@ -271,3 +279,4 @@ if __name__ == "__main__":
         #print('valid_detection: ', ele["valid_detection"])
         if idx == 100:
             break
+

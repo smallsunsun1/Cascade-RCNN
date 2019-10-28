@@ -156,16 +156,22 @@ def fastrcnn_losses(labels, label_logits, fg_boxes, fg_box_logits):
         empty_fg, 0., tf.cast(tf.truediv(num_zero, num_fg), tf.float32), name='false_negative')
     fg_accuracy = tf.where(
         empty_fg, 0., tf.reduce_mean(tf.gather(correct, fg_inds)), name='fg_accuracy')
-    box_loss = tf.reduce_sum(tf.abs(fg_boxes - fg_box_logits))
+    diff_boxes = tf.abs(fg_boxes - fg_box_logits)
+    diff_boxes_loss = tf.reduce_sum(diff_boxes, axis=-1)
+    valid_diff_boxes_loss = tf.where(tf.is_nan(diff_boxes_loss), tf.zeros_like(diff_boxes_loss), diff_boxes_loss)
+    box_loss = tf.reduce_sum(valid_diff_boxes_loss)
     box_loss = tf.truediv(
-        box_loss, tf.cast(tf.shape(labels)[0], tf.float32), name='box_loss')
+        box_loss, tf.maximum(tf.cast(tf.shape(labels)[0], tf.float32), 1.0), name='box_loss')
     tf.summary.scalar('label_loss', label_loss)
     tf.summary.scalar('box_loss', box_loss)
     tf.summary.scalar('accuracy', accuracy)
     tf.summary.scalar('fg_accuracy', fg_accuracy)
     tf.summary.scalar('false_negtive', false_negative)
     tf.summary.scalar('num_fg_label', tf.cast(num_fg, tf.float32))
-    return [label_loss, box_loss]
+    #print_op = tf.print({'frcnn_box_loss': box_loss, 'frcnn_label_loss': label_loss,
+    #                     'fg_boxes': fg_boxes, 'fg_box_logits': fg_box_logits})
+    #with tf.control_dependencies([print_op]):
+    return [tf.identity(label_loss), tf.identity(box_loss)]
 
 
 def fastrcnn_predictions_v2(boxes, score):

@@ -62,7 +62,7 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
                                                     lambda: (image, box_l, box_r, box_t, box_b))
         image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
-        image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
+        #image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
     box_l = box_l * target_w_float
     box_r = box_r * target_w_float
     box_t = box_t * target_h_float
@@ -78,6 +78,7 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
 def tf_transform(data, training=True):
     file_data = tf.io.read_file(data["filename"])
     data["boxes"] = tf.reshape(tf.io.decode_raw(data["boxes"], tf.float32), shape=[-1, 4])
+    data["boxes"] = tf.clip_by_value(data['boxes'], 0.0, 1.0)
     image = tf.image.decode_jpeg(file_data, 3)
     shape2d = tf.cast(tf.shape(image)[:2], tf.float32)
     h = shape2d[0]
@@ -102,8 +103,11 @@ def tf_transform(data, training=True):
     #new_width = 960
     target_size = [new_height, new_width]
     data["image"], data["boxes"] = transform_img_and_boxes(image, data["boxes"], target_size, training)
-    data["class"] = tf.reshape(tf.io.decode_raw(data['class'], tf.int32), shape=[-1]) + 1
-    data["is_crowd"] = tf.reshape(tf.io.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
+    # for some dataset, this class label should add 1, for other dataset, this class label should keep same
+    data["class"] = tf.reshape(tf.io.decode_raw(data['class'], tf.int32), shape=[-1]) 
+    #data["is_crowd"] = tf.reshape(tf.io.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
+    # ignore crowd
+    data["is_crowd"] = tf.zeros(shape=[tf.shape(data['class'])[0],], dtype=tf.int32)
     return data
 
 
