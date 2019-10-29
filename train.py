@@ -25,6 +25,38 @@ from util.data_loader import input_fn, test_input_fn
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
+def map_boxes_back(boxes, features):
+    h_pre = features['h_pre']
+    w_pre = features['w_pre']
+    h_now = features['h_now']
+    w_now = features['w_now']
+    scale = features['scale']  # 表示宽除以高
+    scale_now = w_now / h_now
+    if scale > 1:
+        true_h = w_now / scale
+        pad_h_top = (h_now - true_h) // 2
+        pad_h_bottom = h_now - true_h - pad_h_top
+        pad_w_left = 0
+        pad_w_right = 0
+        true_w = w_now
+    else:
+        true_w = h_now * scale
+        pad_w_left = (w_now - true_w) // 2
+        pad_w_right = w_now - true_w - pad_w_left
+        pad_h_top = 0
+        pad_h_bottom = 0
+        true_h = h_now
+    boxes[:, 0] = boxes[:, 0] - pad_w_left
+    boxes[:, 1] = boxes[:, 1] - pad_h_top
+    boxes[:, 2] = boxes[:, 2] - pad_w_left
+    boxes[:, 3] = boxes[:, 3] - pad_h_top
+    boxes[:, 0] = boxes[:, 0] / true_w * w_pre
+    boxes[:, 1] = boxes[:, 1] / true_h * h_pre
+    boxes[:, 2] = boxes[:, 2] / true_w * w_pre
+    boxes[:, 3] = boxes[:, 3] / true_h * h_pre
+    return boxes 
+
+
 def resnet_c4_model_fn(features, labels, mode, params):
     """参数定义部分"""
     is_train = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -137,7 +169,9 @@ def resnet_fpn_model_fn(features, labels, mode, params):
     rpn_outputs = [rpn_head(pi, _C.FPN.NUM_CHANNEL, len(_C.RPN.ANCHOR_RATIOS)) for pi in p23456]
     multilevel_label_logits = [k[0] for k in rpn_outputs]
     multilevel_box_logits = [k[1] for k in rpn_outputs]
-
+    debug_op = tf.print({"debug_inf": tf.convert_to_tensor("now in here")})
+    with tf.control_dependencies([debug_op]):
+        image_shape2d = tf.identity(image_shape2d)
     if mode != tf.estimator.ModeKeys.PREDICT:
         multilevel_anchors = [RPNAnchors(all_anchors_fpn[i], features['anchor_labels_lvl{}'.format(i + 2)],
                                      features['anchor_boxes_lvl{}'.format(i+2)]) for i in range(len(all_anchors_fpn))]
@@ -209,7 +243,14 @@ def resnet_fpn_model_fn(features, labels, mode, params):
         predictions = {'boxes': final_boxes,
                        'labels': final_labels,
                        'scores': final_scores,
-                       'image': features['image']}
+                       'image': features['image'],
+                       'original_image': features['original_image'],
+                       'h_pre': features['h_pre'],
+                       'w_pre': features['w_pre'],
+                       'h_now': features['h_now'],
+                       'w_now': features['w_now'],
+                       'scale': features['scale']
+                      }
         return tf.estimator.EstimatorSpec(mode, predictions)
 
 model_dict = {"rpn": resnet_c4_model_fn,
@@ -239,7 +280,7 @@ if __name__ == "__main__":
     params["weight_decay"] = _C.TRAIN.WEIGHT_DECAY
     params["learning_rate"] = _C.TRAIN.BASE_LR
     params["lr_schedule"] = [_C.TRAIN.WARMUP] + _C.TRAIN.LR_SCHEDULE
-    dataset = input_fn(args.train_filename, True, _C.MODE_FPN)
+    #dataset = input_fn(args.train_filename, True, _C.MODE_FPN)
     #for idx, element in enumerate(dataset):
     #    print(idx)
     #    print(element)
@@ -262,18 +303,26 @@ if __name__ == "__main__":
                                            params)
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=None)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
-    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+    # tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
     res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
+    score_thresh = 0.50
     for idx, ele in enumerate(res):
-        image = ele["image"][0].astype(np.uint8)
+        image = ele["original_image"].astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        for box in ele["boxes"]:
-            cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-        cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
         print("boxes: ", ele["boxes"])
         print("labels: ", ele["labels"])
         print("scores: ", ele["scores"])
+        ele["boxes"] = map_boxes_back(ele["boxes"], ele)
+        for num_idx, box in enumerate(ele["boxes"]):
+            if ele["scores"][num_idx] < score_thresh:
+                continue
+            cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
+            cv2.putText(image, '{}'.format(ele["labels"][num_idx]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 255), 1)
+        cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
+        #print("boxes: ", ele["boxes"])
+        #print("labels: ", ele["labels"])
+        #print("scores: ", ele["scores"])
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
         #print('valid_detection: ', ele["valid_detection"])

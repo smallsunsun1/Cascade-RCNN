@@ -62,7 +62,7 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
                                                     lambda: (image, box_l, box_r, box_t, box_b))
         image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
-        #image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
+        image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
     box_l = box_l * target_w_float
     box_r = box_r * target_w_float
     box_t = box_t * target_h_float
@@ -146,6 +146,7 @@ def input_fn(filenames, training=True, fpn_mode=True):
 def read_img(filename, target_height, target_width):
     content = tf.io.read_file(filename)
     image = tf.image.decode_jpeg(content, 3)
+    original_image = image
     image_shape = tf.shape(image)
     shape2d = image_shape[:2]
     h = shape2d[0]
@@ -170,6 +171,12 @@ def read_img(filename, target_height, target_width):
     image = tf.image.resize_image_with_pad(image, new_height, new_width)
     features = {}
     features['image'] = tf.expand_dims(image, 0)
+    features['original_image'] = original_image
+    features['h_pre'] = h
+    features['w_pre'] = w
+    features['h_now'] = new_height
+    features['w_now'] = new_width
+    features['scale'] = scale
     return features
 
 
