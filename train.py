@@ -306,10 +306,11 @@ if __name__ == "__main__":
     # tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
     res = estimator.predict(lambda: test_input_fn(args.test_filename, 720, 720), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
-    score_thresh = 0.50
+    score_thresh = 0.5
     for idx, ele in enumerate(res):
         image = ele["original_image"].astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        print("current image index: ", idx)
         print("boxes: ", ele["boxes"])
         print("labels: ", ele["labels"])
         print("scores: ", ele["scores"])
