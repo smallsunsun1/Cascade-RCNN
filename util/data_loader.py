@@ -52,17 +52,17 @@ def transform_img_and_boxes(image, boxes, target_size, training=True):
             return image, box_l, box_r, box_b, box_t
 
         def random_aug(image):
-            image = tf.image.random_brightness(image, 0.01)
-            image = tf.image.random_contrast(image, 0.2, 1.8)
-            image = tf.image.random_hue(image, 0.05)
+            #image = tf.image.random_brightness(image, 0.01)
+            #image = tf.image.random_contrast(image, 0.2, 1.8)
+            #image = tf.image.random_hue(image, 0.05)
             image = tf.clip_by_value(image, 0, 255)
             return image
 
         image, box_l, box_r, box_t, box_b = tf.cond(cond1, lambda: flip_left_right(image, box_l, box_r, box_t, box_b),
                                                     lambda: (image, box_l, box_r, box_t, box_b))
-        image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
-                                                    lambda: (image, box_l, box_r, box_t, box_b))
-        image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
+        #image, box_l, box_r, box_t, box_b = tf.cond(cond2, lambda: flip_top_down(image, box_l, box_r, box_t, box_b),
+        #                                            lambda: (image, box_l, box_r, box_t, box_b))
+        #image = tf.cond(cond3, lambda: random_aug(image), lambda: image)
     box_l = box_l * target_w_float
     box_r = box_r * target_w_float
     box_t = box_t * target_h_float
@@ -92,11 +92,15 @@ def tf_transform(data, training=True):
         scale = tf.cast(h / w, tf.float32)
         new_w = tf.random.uniform([], 600, 801, tf.int32) // 32 * 32
         new_h = tf.minimum(tf.cast(tf.cast(new_w, tf.float32) * scale, tf.int32), 1280) // 32 * 32
+        new_w = 800
+        new_h = 1312
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     def false_fn(h, w):
         scale = tf.cast(w / h, tf.float32)
         new_h = tf.random.uniform([], 600, 801, tf.int32) // 32 * 32
         new_w =  tf.minimum(tf.cast(tf.cast(new_h, tf.float32) * scale, tf.int32), 1280) // 32 * 32
+        new_h = 800
+        new_w = 1312
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(shape2d[0], shape2d[1]), lambda: false_fn(shape2d[0], shape2d[1]))
     #new_height = 640
@@ -104,8 +108,8 @@ def tf_transform(data, training=True):
     target_size = [new_height, new_width]
     data["image"], data["boxes"] = transform_img_and_boxes(image, data["boxes"], target_size, training)
     # for some dataset, this class label should add 1, for other dataset, this class label should keep same
-    data["class"] = tf.reshape(tf.io.decode_raw(data['class'], tf.int32), shape=[-1]) 
-    #data["is_crowd"] = tf.reshape(tf.io.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
+    data["class"] = tf.reshape(tf.io.decode_raw(data['class'], tf.int32), shape=[-1])
+    # data["is_crowd"] = tf.reshape(tf.io.decode_raw(data['is_crowd'], tf.int32), shape=[-1])
     # ignore crowd
     data["is_crowd"] = tf.zeros(shape=[tf.shape(data['class'])[0],], dtype=tf.int32)
     return data

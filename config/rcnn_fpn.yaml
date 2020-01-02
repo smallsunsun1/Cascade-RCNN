@@ -7,8 +7,8 @@ DATA:
   BASEDIR: "xxx"
   TRAIN: ["train2017"]
   VAL: "val2017"
-  NUM_CATEGORY: 20
-  NUM_CLASS: 21
+  NUM_CATEGORY: 80
+  NUM_CLASS: 81
   CLASS_NAMES: []
 
 # basemodel
@@ -23,11 +23,11 @@ BACKBONE:
 TRAIN:
   NUM_GPUS: ~
   WEIGHT_DECAY: 0.0001
-  BASE_LR: 0.01
+  BASE_LR: 0.04
   WARMUP: 1000
   STEPS_PER_EPOCH: 500
   STARTING_EPOCH: 1
-  LR_SCHEDULE: [400000, 800000, 1000000, 1100000]
+  LR_SCHEDULE: [100000, 1800000, 2000000, 2200000]
   EVAL_PERIOD: 25
 
 # preprocessing
@@ -63,7 +63,7 @@ RPN:
 
 # fastrcnn training
 FRCNN:
-  BATCH_PER_IM: 64  # original is 512, for now 马赛克训练设置为5
+  BATCH_PER_IM: 80  # original is 512, now is 64 for training
   BBOX_REG_WEIGHTS: [10, 10, 5, 5]
   FG_THRESH: 0.5
   FG_RATIO: 0.25

@@ -70,6 +70,8 @@ def image_preprocess(image):
     image = tf.cast(image, tf.float32)
     mean = _C.PREPROC.PIXEL_MEAN
     std = np.asarray(_C.PREPROC.PIXEL_STD)
+    mean = 127.5
+    std = 255.0
     image_mean = tf.convert_to_tensor(mean, tf.float32)
     image_invstd = tf.convert_to_tensor(1.0 / std, dtype=tf.float32)
     image = (image - image_mean) * image_invstd

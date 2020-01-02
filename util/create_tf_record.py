@@ -321,6 +321,10 @@ def generate_from_coco_json(basedir,  year='train2017', output_file='./data/coco
     for idx, element in enumerate(tqdm.tqdm(roidbs)):
         boxes = element['boxes']
         classes = element['class'].astype(np.int32)
+        # print(len(classes))
+        if len(classes) == 0:
+            #print(classes)
+            continue
         is_crowd = element['is_crowd'].astype(np.int32)
         filename = element['file_name']
         img = Image.open(filename)
@@ -382,16 +386,16 @@ if __name__ == "__main__":
     #generate_from_json(input_filenames, output_filenames)
 
     ## This part is used for coco data loading test
-    #basedir = '/mnt/WXRG0243/jhsun/Data'
-    #year = 'val2017'
-    #output_filenames = '/mnt/WXRG0243/jhsun/Github/Master_work/data/eval_coco.tfrecord'
-    #generate_from_coco_json(basedir, year, output_filenames)
+    basedir = '/home/admin-seu/TempData'
+    year = 'val2017'
+    output_filenames = '/home/admin-seu/TempData/sss/Master_work/data/eval_coco.tfrecord'
+    generate_from_coco_json(basedir, year, output_filenames)
     #roidbs = c.load(add_gt=True, add_mask=False)
-    #for ele in roidbs[:10]:
+    #for ele in roidbs[:100]:
     #    print(ele)
     #    print()
-    dataset = input_fn(output_filenames)
-    for idx, ele in enumerate(dataset):
-        print(ele)
-        if idx == 0:
-            break
+    #dataset = input_fn(output_filenames)
+    #for idx, ele in enumerate(dataset):
+    #    print(ele)
+    #    if idx == 0:
+    #        break

@@ -25,6 +25,22 @@ def rpn_head(feature_map, channel, num_anchors):
     box_logits = tf.reshape(box_logits, [shp[1], shp[2], num_anchors, 4])  # fHxfWxNAx4
     return label_logits, box_logits
 
+class RPNHead(keras.layers.Layer):
+    def __init__(self, channel, num_anchors):
+        super(RPNHead, self).__init__()
+        self.hidden = keras.layers.Conv2D(channel, (3, 3), activation=tf.nn.relu, padding="same")
+        self.ll = keras.layers.Conv2D(num_anchors, (1, 1), padding="same", name='class')
+        self.bl = keras.layers.Conv2D(4 * num_anchors, (1, 1), padding="same", name='box')
+    def call(self, inputs):
+        hidden = self.hidden(inputs)
+        label_logits = self.ll(hidden)
+        box_logits = self.bl(hidden)
+        label_logits = tf.squeeze(label_logits, axis=0)
+        shp = tf.shape(box_logits)
+        box_logits = tf.reshape(box_logits, [shp[1], shp[2], -1, 4])  # fHxfWxNAx4
+        return label_logits, box_logits
+    
+
 
 def rpn_losses(anchor_labels, anchor_boxes, label_logits, box_logits):
     """
