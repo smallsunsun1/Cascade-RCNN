@@ -156,8 +156,10 @@ def fastrcnn_losses(labels, label_logits, fg_boxes, fg_box_logits):
         empty_fg, 0., tf.cast(tf.truediv(num_zero, num_fg), tf.float32), name='false_negative')
     fg_accuracy = tf.where(
         empty_fg, 0., tf.reduce_mean(tf.gather(correct, fg_inds)), name='fg_accuracy')
-    diff_boxes = tf.abs(fg_boxes - fg_box_logits)
-    diff_boxes_loss = tf.reduce_sum(diff_boxes, axis=-1)
+    #diff_boxes = tf.abs(fg_boxes - fg_box_logits)
+    #diff_boxes_loss = tf.reduce_sum(diff_boxes, axis=-1)
+    diff_boxes_loss = tf.losses.huber_loss(fg_boxes, fg_box_logits, reduction=tf.losses.Reduction.NONE)
+    diff_boxes_loss = tf.reduce_sum(diff_boxes_loss, axis=-1)
     valid_diff_boxes_loss = tf.where(tf.is_nan(diff_boxes_loss), tf.zeros_like(diff_boxes_loss), diff_boxes_loss)
     box_loss = tf.reduce_sum(valid_diff_boxes_loss)
     box_loss = tf.truediv(
