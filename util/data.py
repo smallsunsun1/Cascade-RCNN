@@ -40,10 +40,11 @@ def tf_get_all_anchors(stride=None, sizes=None, ratios=(0.5, 1, 2)):
             tf.reshape(cell_anchors, shape=[1, A, 4]) + tf.transpose(tf.reshape(shifts, [1, K, 4]), perm=[1, 0, 2]))
     field_of_anchors = tf.reshape(field_of_anchors, shape=[field_size, field_size, A, 4])
     field_of_anchors = tf.cast(field_of_anchors, tf.float32)
-    s1, s2, s3, s4 = tf.split(field_of_anchors, num_or_size_splits=4, axis=-1)
-    s3 = s3 + 1
-    s4 = s4 + 1
-    return tf.concat([s1, s2, s3, s4], axis=-1)
+    return field_of_anchors
+#s1, s2, s3, s4 = tf.split(field_of_anchors, num_or_size_splits=4, axis=-1)
+#    s3 = s3 + 1
+#    s4 = s4 + 1
+#    return tf.concat([s1, s2, s3, s4], axis=-1)
 
 
 def tf_get_all_anchors_fpn(strides=(4, 8, 16, 32, 64), sizes=(32, 64, 128, 256, 512), ratios=(0.5, 1, 2)):
@@ -202,6 +203,7 @@ def tf_get_multilevel_rpn_anchor_input(im, boxes, is_crowd):
         multilevel_inputs.append((tf.reshape(all_labels[start:end], anchor_shape),
                                   tf.reshape(all_boxes[start:end, :], tf.concat([anchor_shape, [4, ]], axis=-1))))
         start = end
+    #tf.assert_equal(end, num_all_anchors, [end, num_all_anchors], message="end and num_all_anchor must be equal!")
     return multilevel_inputs
 
 

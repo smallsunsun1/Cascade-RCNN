@@ -70,7 +70,10 @@ def sample_fast_rcnn_targets(boxes, gt_boxes, gt_labels):
                 It contains the matching GT of each foreground roi.
         """
     iou = tf_iou(boxes, gt_boxes)  # nxm
+    iou_shape = tf.shape(iou)
+    #print_op = tf.print("iou_shape: ", iou_shape)
     proposal_metrics(iou)
+    #with tf.control_dependencies([print_op]):
     boxes = tf.concat([boxes, gt_boxes], axis=0)
     iou = tf.concat([iou, tf.eye(tf.shape(gt_boxes)[0])], axis=0)
     # proposal=n+m from now on
@@ -78,11 +81,13 @@ def sample_fast_rcnn_targets(boxes, gt_boxes, gt_labels):
         fg_mask = tf.cond(tf.shape(iou)[1] > 0,
                           lambda: tf.reduce_max(iou, axis=1) >= _C.FRCNN.FG_THRESH,
                           lambda: tf.zeros([tf.shape(iou)[0]], dtype=tf.bool))
-
         fg_inds = tf.reshape(tf.where(fg_mask), [-1])
+        fg_inds_shape = tf.shape(fg_inds)
+        #print_op = tf.print("fg_inds_shape: ", fg_inds_shape)
         num_fg = tf.minimum(int(
             _C.FRCNN.BATCH_PER_IM * _C.FRCNN.FG_RATIO),
             tf.size(fg_inds), name='num_fg')
+        #with tf.control_dependencies([print_op]):
         fg_inds = tf.random_shuffle(fg_inds)[:num_fg]
 
         bg_inds = tf.reshape(tf.where(tf.logical_not(fg_mask)), [-1])
@@ -158,6 +163,9 @@ def fastrcnn_losses(labels, label_logits, fg_boxes, fg_box_logits):
         empty_fg, 0., tf.reduce_mean(tf.gather(correct, fg_inds)), name='fg_accuracy')
     #diff_boxes = tf.abs(fg_boxes - fg_box_logits)
     #diff_boxes_loss = tf.reduce_sum(diff_boxes, axis=-1)
+    #invalid_fg_indices = tf.where(tf.math.is_inf(fg_boxes))
+    #with tf.control_dependencies([invalid_fg_indices]):
+    #tf.print(invalid_fg_indices)
     diff_boxes_loss = tf.losses.huber_loss(fg_boxes, fg_box_logits, reduction=tf.losses.Reduction.NONE)
     diff_boxes_loss = tf.reduce_sum(diff_boxes_loss, axis=-1)
     valid_diff_boxes_loss = tf.where(tf.is_nan(diff_boxes_loss), tf.zeros_like(diff_boxes_loss), diff_boxes_loss)

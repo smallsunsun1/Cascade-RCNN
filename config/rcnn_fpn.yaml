@@ -23,7 +23,7 @@ BACKBONE:
 TRAIN:
   NUM_GPUS: ~
   WEIGHT_DECAY: 0.0001
-  BASE_LR: 0.03
+  BASE_LR: 0.003
   WARMUP: 1000
   STEPS_PER_EPOCH: 500
   STARTING_EPOCH: 1
@@ -47,7 +47,7 @@ RPN:
   NEGATIVE_ANCHOR_THRESH: 0.3
   FG_RATIO: 0.5 # fg ratio among selected RPN anchors
   BATCH_PER_IM: 256 # total (across FPN levels) number of anchors that are marked valid
-  PROPOSAL_NMS_THRESH: 0.5
+  PROPOSAL_NMS_THRESH: 0.7
   HEAD_DIM: 1024
   TRAIN_PRE_NMS_TOPK: 12000
   TRAIN_POST_NMS_TOPK: 2000
@@ -63,7 +63,7 @@ RPN:
 
 # fastrcnn training
 FRCNN:
-  BATCH_PER_IM: 80  # original is 512, now is 64 for training
+  BATCH_PER_IM: 512  # original is 512, now is 64 for training
   BBOX_REG_WEIGHTS: [10, 10, 5, 5]
   FG_THRESH: 0.5
   FG_RATIO: 0.25
@@ -79,7 +79,7 @@ FPN:
   FRCNN_CONV_HEAD_DIM: 256
   FRCNN_FC_HEAD_DIM: 1024
   MRCNN_HEAD_FUNC: "maskrcnn_up4conv_head"
-  CASCADE: true
+  CASCADE: false
 
 # Mask-RCNN
 MRCNN:
