@@ -5,7 +5,7 @@ sys.path.append("..")
 from config.config import _C
 from .model_box import clip_boxes
 from .model_frcnn import BoxProposals, FastRCNNHead, fastrcnn_outputs
-from util.box_ops import tf_iou
+from util.box_ops import tf_iou, tf_area
 
 
 class CascadeRCNNHead(object):
@@ -57,6 +57,8 @@ class CascadeRCNNHead(object):
         head = FastRCNNHead(proposals, box_logits, label_logits, self.gt_boxes, reg_weights)
         refined_boxes = head.decoded_output_boxes_class_agnostic()
         refined_boxes = clip_boxes(refined_boxes, self.image_shape2d)
+        if self.is_train:
+            refined_boxes = tf.boolean_mask(refined_boxes, tf_area(refined_boxes) > 0)
         return head, tf.stop_gradient(refined_boxes)
 
     def match_box_with_gt(self, boxes, iou_threshold):

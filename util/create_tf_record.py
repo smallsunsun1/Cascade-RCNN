@@ -370,7 +370,7 @@ def input_fn(filenames):
 
 
 if __name__ == "__main__":
-    tf.enable_eager_execution()
+    #tf.enable_eager_execution()
     # input_filenames = "/home/admin-seu/hugh/yolov3-tf2/data_native/eval.txt"
     # input_filenames = "/home/admin-seu/sss/master_work/data/train.txt"
     #input_filenames = "/mnt/WXRG0243/jhsun/Data/2007_test.txt"
@@ -387,8 +387,8 @@ if __name__ == "__main__":
 
     ## This part is used for coco data loading test
     basedir = '/home/admin-seu/TempData'
-    year = 'val2017'
-    output_filenames = '/home/admin-seu/TempData/sss/Master_work/data/eval_coco.tfrecord'
+    year = 'train2017'
+    output_filenames = '/home/admin-seu/TempData/sss/Master_work/data/eval_train2017.tfrecord'
     generate_from_coco_json(basedir, year, output_filenames)
     #roidbs = c.load(add_gt=True, add_mask=False)
     #for ele in roidbs[:100]:

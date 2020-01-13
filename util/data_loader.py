@@ -90,17 +90,17 @@ def tf_transform(data, training=True):
     #new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333) // 32 * 32
     def true_fn(h, w):
         scale = tf.cast(h / w, tf.float32)
-        new_w = tf.random.uniform([], 600, 801, tf.int32) // 32 * 32
-        new_h = tf.minimum(tf.cast(tf.cast(new_w, tf.float32) * scale, tf.int32), 1280) // 32 * 32
-        new_w = 800
-        new_h = 1312
+        new_w = tf.random.uniform([], 640, 801, tf.int32) // 32 * 32
+        new_h = tf.minimum(tf.cast(tf.cast(new_w, tf.float32) * scale, tf.int32), 1312) // 32 * 32
+        #new_w = 800
+        #new_h = 1312
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     def false_fn(h, w):
         scale = tf.cast(w / h, tf.float32)
-        new_h = tf.random.uniform([], 600, 801, tf.int32) // 32 * 32
-        new_w =  tf.minimum(tf.cast(tf.cast(new_h, tf.float32) * scale, tf.int32), 1280) // 32 * 32
-        new_h = 800
-        new_w = 1312
+        new_h = tf.random.uniform([], 640, 801, tf.int32) // 32 * 32
+        new_w =  tf.minimum(tf.cast(tf.cast(new_h, tf.float32) * scale, tf.int32), 1312) // 32 * 32
+        #new_h = 800
+        #new_w = 1312
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(shape2d[0], shape2d[1]), lambda: false_fn(shape2d[0], shape2d[1]))
     #new_height = 640
