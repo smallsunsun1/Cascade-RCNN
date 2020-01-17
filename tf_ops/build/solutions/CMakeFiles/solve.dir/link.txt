@@ -1,1 +1,0 @@
-/usr/local/Cellar/gcc/9.1.0/bin/g++-9 -O3 -DNDEBUG -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk -dynamiclib -Wl,-headerpad_max_install_names -fPIC -o libsolve.so -install_name @rpath/libsolve.so CMakeFiles/solve.dir/solve.cc.o 

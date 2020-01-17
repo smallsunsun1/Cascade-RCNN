@@ -1,24 +1,42 @@
 # The set of languages for which implicit dependencies are needed:
 set(CMAKE_DEPENDS_LANGUAGES
+  "CUDA"
   "CXX"
   )
 # The set of files for implicit dependencies of each language:
+set(CMAKE_DEPENDS_CHECK_CUDA
+  "/home/admin-seu/TempData/sss/custom_ops/deformable_conv2d_ops/deformable_conv.cu" "/home/admin-seu/TempData/sss/custom_ops/deformable_conv2d_ops/build/CMakeFiles/ops.dir/deformable_conv.cu.o"
+  )
+set(CMAKE_CUDA_COMPILER_ID "NVIDIA")
+
+# Preprocessor definitions for this target.
+set(CMAKE_TARGET_DEFINITIONS_CUDA
+  "EIGEN_USE_GPU"
+  "EIGEN_USE_THREADS"
+  "GOOGLE_CUDA=1"
+  )
+
+# The include file search paths:
+set(CMAKE_CUDA_TARGET_INCLUDE_PATH
+  "/usr/local/cuda/include"
+  "/home/admin-seu/miniconda3/envs/py36/lib/python3.6/site-packages/tensorflow_core/include"
+  )
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/Users/sunjiahe/CLionProjects/tf_ops/reader/image_ops.cc" "/Users/sunjiahe/CLionProjects/tf_ops/build/CMakeFiles/ops.dir/reader/image_ops.cc.o"
-  "/Users/sunjiahe/CLionProjects/tf_ops/reader/my_reader_dataset_op.cc" "/Users/sunjiahe/CLionProjects/tf_ops/build/CMakeFiles/ops.dir/reader/my_reader_dataset_op.cc.o"
+  "/home/admin-seu/TempData/sss/custom_ops/deformable_conv2d_ops/deformable_conv2d.cpp" "/home/admin-seu/TempData/sss/custom_ops/deformable_conv2d_ops/build/CMakeFiles/ops.dir/deformable_conv2d.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # Preprocessor definitions for this target.
 set(CMAKE_TARGET_DEFINITIONS_CXX
-  "GOOGLE_CUDA"
-  "_GLIBCXX_USE_CXX11_ABI=0"
-  "ops_EXPORTS"
+  "EIGEN_USE_GPU"
+  "EIGEN_USE_THREADS"
+  "GOOGLE_CUDA=1"
   )
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
-  "/Users/sunjiahe/miniconda3/lib/python3.6/site-packages/tensorflow/include"
+  "/usr/local/cuda/include"
+  "/home/admin-seu/miniconda3/envs/py36/lib/python3.6/site-packages/tensorflow_core/include"
   )
 
 # Targets to which this target links.
