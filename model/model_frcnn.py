@@ -276,6 +276,7 @@ def fastrcnn_Xconv1fc_head(feature, num_convs, norm=None):
                                 name="conv{}".format(k))(l)
         if norm is not None:
             l = group_normalization(l)
+    l = keras.layers.Flatten()(l)
     l = keras.layers.Dense(_C.FPN.FRCNN_FC_HEAD_DIM, activation=tf.nn.relu)(l)
     return l
 

@@ -15,21 +15,24 @@ def batch_normalization(x, is_train=True):
 def group_normalization(x, G=32, esp=1e-5):
     shape_info = x.get_shape().as_list()
     x = tf.transpose(x, [0, 3, 1, 2])
+    ori_shape = tf.shape(x)
     x_shape = tf.shape(x)
     C = x_shape[1]
     H = x_shape[2]
     W = x_shape[3]
-    G = tf.minimum(G, C)
+    group = tf.minimum(G, C)
+    group_size = C // group
+    new_shape = [1, group, group_size, 1, 1]
     x = tf.reshape(x, [-1, G, C // G, H, W])
     mean, var = tf.nn.moments(x, [2, 3, 4], keep_dims=True)
     x = (x - mean) / tf.sqrt(var + esp)
     # per channel gamma and beta
     gamma = tf.Variable(tf.ones(shape=[shape_info[3]]), dtype=tf.float32, name='gamma')
     beta = tf.Variable(tf.ones(shape=[shape_info[3]]), dtype=tf.float32, name='beta')
-    gamma = tf.reshape(gamma, [1, C, 1, 1])
-    beta = tf.reshape(beta, [1, C, 1, 1])
-
-    output = tf.reshape(x, [-1, C, H, W]) * gamma + beta
+    gamma = tf.reshape(gamma, new_shape)
+    beta = tf.reshape(beta, new_shape)
+    output = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-5, name='output')
+    output = tf.reshape(output, ori_shape, name='output')
     # tranpose: [bs, c, h, w, c] to [bs, h, w, c] following the paper
     output = tf.transpose(output, [0, 2, 3, 1])
     output.set_shape(shape_info)

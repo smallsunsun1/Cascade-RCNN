@@ -157,15 +157,18 @@ def read_img(filename, target_height, target_width):
     w = shape2d[1]
     scale = tf.cast(w / h, tf.float32)
     SHORT_IMAGE_EDGE = 800
+    # SHORT_IMAGE_EDGE = tf.cast(tf.minimum(h, w), tf.float32)
+    LONG_IMAGE_EDGE = 1312
+    # LONG_IMAGE_EDGE = tf.cast(tf.maximum(h, w), tf.float32)
     def true_fn(h, w):
         scale = tf.cast(h / w, tf.float32)
         new_w = SHORT_IMAGE_EDGE
-        new_h = tf.minimum(new_w * scale // 32 * 32, 1280)
+        new_h = tf.minimum(new_w * scale // 32 * 32, LONG_IMAGE_EDGE)
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     def false_fn(h, w):
         scale = tf.cast(w / h, tf.float32)
         new_h = SHORT_IMAGE_EDGE
-        new_w = tf.minimum(new_h * scale // 32 * 32, 1280)
+        new_w = tf.minimum(new_h * scale // 32 * 32, LONG_IMAGE_EDGE)
         return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
     #new_height = target_height
     #new_widtht = target_width

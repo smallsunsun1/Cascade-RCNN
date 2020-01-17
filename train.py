@@ -224,7 +224,7 @@ def resnet_fpn_model_fn(features, labels, mode, params):
         total_cost = tf.add(total_cost, weight_loss, 'all_total_cost')
         if is_train:
             learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
-                                                        values=[tf.convert_to_tensor(0.01 * 0.33, tf.float32)] + [
+                                                        values=[tf.convert_to_tensor(0.01 * 0.33 * 0.5, tf.float32)] + [
                                                             learning_rate * (0.1 ** i) for i in
                                                             range(len(lr_schedule))])
             tf.summary.scalar("learning_rate", learning_rate)
@@ -258,6 +258,41 @@ def resnet_fpn_model_fn(features, labels, mode, params):
 
 model_dict = {"rpn": resnet_c4_model_fn,
               "fpn": resnet_fpn_model_fn}
+
+def serve_input_fn():
+    input = tf.placeholder(dtype=tf.float32, shape=[None, None, 3],
+                                     name="input")
+    # input = tf.squeeze(input, axis=0)
+    image_shape = tf.shape(input)
+    shape2d = image_shape[:2]
+    h = shape2d[0]
+    w = shape2d[1]
+    scale = tf.cast(w / h, tf.float32)
+    SHORT_IMAGE_EDGE = 800
+
+    def true_fn(h, w):
+        scale = tf.cast(h / w, tf.float32)
+        new_w = SHORT_IMAGE_EDGE
+        new_h = tf.minimum(new_w * scale // 32 * 32, 1312)
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+
+    def false_fn(h, w):
+        scale = tf.cast(w / h, tf.float32)
+        new_h = SHORT_IMAGE_EDGE
+        new_w = tf.minimum(new_h * scale // 32 * 32, 1312)
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+
+    new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(h, w), lambda: false_fn(h, w))
+    image = tf.image.resize_image_with_pad(input, new_height, new_width)
+    features = {}
+    features['image'] = tf.expand_dims(image, 0)
+    features['original_image'] = image_shape
+    features['h_pre'] = h
+    features['w_pre'] = w
+    features['h_now'] = new_height
+    features['w_now'] = new_width
+    features['scale'] = scale
+    return tf.estimator.export.ServingInputReceiver(features, input)
 
 
 if __name__ == "__main__":
@@ -307,9 +342,10 @@ if __name__ == "__main__":
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=None)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+    #estimator.export_saved_model("./export_model", serve_input_fn)
     res = estimator.predict(lambda: test_input_fn(args.test_filename, 960, 960), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
-    score_thresh = 0.5
+    score_thresh = 0.6
     for idx, ele in enumerate(res):
         image = ele["original_image"].astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -322,7 +358,7 @@ if __name__ == "__main__":
             if ele["scores"][num_idx] < score_thresh:
                 continue
             cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-            cv2.putText(image, '{}'.format(ele["labels"][num_idx]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 255), 1)
+            cv2.putText(image, '{}'.format(ele["labels"][num_idx]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1)
         cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
         #print("boxes: ", ele["boxes"])
         #print("labels: ", ele["labels"])
@@ -330,6 +366,6 @@ if __name__ == "__main__":
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
         #print('valid_detection: ', ele["valid_detection"])
-        if idx == 100:
+        if idx == 200:
             break
 
