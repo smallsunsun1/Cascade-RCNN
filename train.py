@@ -4,6 +4,7 @@ import tensorflow as tf
 import os
 import cv2
 import re
+import time
 
 from tensorflow import keras
 from tensorflow.contrib import distribute
@@ -341,11 +342,12 @@ if __name__ == "__main__":
                                            params)
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=None)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
-    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+    # tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
     #estimator.export_saved_model("./export_model", serve_input_fn)
     res = estimator.predict(lambda: test_input_fn(args.test_filename, 960, 960), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
     score_thresh = 0.6
+    start = time.time()
     for idx, ele in enumerate(res):
         image = ele["original_image"].astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -358,7 +360,7 @@ if __name__ == "__main__":
             if ele["scores"][num_idx] < score_thresh:
                 continue
             cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-            cv2.putText(image, '{}'.format(ele["labels"][num_idx]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1)
+            cv2.putText(image, '{}: {:.2}'.format(ele["labels"][num_idx], round(ele["scores"][num_idx], 2)), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1)
         cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
         #print("boxes: ", ele["boxes"])
         #print("labels: ", ele["labels"])
@@ -366,6 +368,8 @@ if __name__ == "__main__":
         # print("rpn_boxes: ", ele["rpn_boxes"])
         # print("rpn_size: ", ele["rpn_size"])
         #print('valid_detection: ', ele["valid_detection"])
-        if idx == 200:
-            break
+        #if idx == 200:
+            #break
+    end = time.time()
+    print((end - start) / 5000)
 
