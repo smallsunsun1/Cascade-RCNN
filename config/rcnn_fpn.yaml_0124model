@@ -16,7 +16,7 @@ BACKBONE:
   WEIGHTS: ""  # path/to/weights
   RESNET_NUM_BLOCKS: [3, 4, 6, 3] # for resnet50
   # RESNET_NUM_BLOCKS: [3, 4, 23, 3]
-  NORM: "GN"
+  NORM: "BN"
   STRIDE_1X1: false
 
 # schedule lr=0.01 * num_gpus/8,  lr_schedule=[180*k - 120, 180 * k - 40, 180 * k] * 8/num_gpus
@@ -27,7 +27,7 @@ TRAIN:
   WARMUP: 1000
   STEPS_PER_EPOCH: 500
   STARTING_EPOCH: 1
-  LR_SCHEDULE: [840000, 1000000, 1120000, 1160000]
+  LR_SCHEDULE: [250000, 370000, 450000]
   EVAL_PERIOD: 25
 
 # preprocessing
@@ -75,8 +75,8 @@ FPN:
   RESOLUTION_REQUIREMENT: 32
   PROPOSAL_MODE: "Level"
   NUM_CHANNEL: 256
-  NORM: "GN"
-  FRCNN_HEAD_FUNC: "fastrcnn_4conv1fc_gn_head"
+  NORM: "BN"
+  FRCNN_HEAD_FUNC: "fastrcnn_2fc_head"
   FRCNN_CONV_HEAD_DIM: 256
   FRCNN_FC_HEAD_DIM: 1024
   MRCNN_HEAD_FUNC: "maskrcnn_up4conv_head"

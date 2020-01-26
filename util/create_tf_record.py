@@ -206,7 +206,7 @@ class COCODetection(DatasetSplit):
         imgs = self.coco.loadImgs(img_ids)
 
         for idx, img in enumerate(tqdm.tqdm(imgs)):
-            img['image_id'] = img.pop('id')
+            img['image_id'] = img['id']
             img['file_name'] = os.path.join(self._imgdir, img['file_name'])
             if idx == 0:
                 # make sure the directories are correctly set
@@ -287,7 +287,7 @@ class COCODetection(DatasetSplit):
             img['segmentation'] = all_segm
 
     def training_roidbs(self):
-        return self.load(add_gt=True, add_mask=cfg.MODE_MASK)
+        return self.load(add_gt=True, add_mask=False)
 
     def inference_roidbs(self):
         return self.load(add_gt=False)
@@ -300,13 +300,14 @@ class COCODetection(DatasetSplit):
                 res['category_id'] = continuous_id_to_COCO_id[res['category_id']]
             # COCO expects results in xywh format
             box = res['bbox']
-            box[2] -= box[0]
-            box[3] -= box[1]
+            # box[2] -= box[0]
+            # box[3] -= box[1]
             res['bbox'] = [round(float(x), 3) for x in box]
 
         if output is not None:
             with open(output, 'w') as f:
                 json.dump(results, f)
+        print(type(results))
         if len(results):
             # sometimes may crash if the results are empty?
             return self.print_coco_metrics(results)
@@ -387,10 +388,21 @@ if __name__ == "__main__":
 
     ## This part is used for coco data loading test
     basedir = '/home/admin-seu/TempData'
-    year = 'train2017'
-    output_filenames = '/home/admin-seu/TempData/sss/Master_work/data/eval_train2017.tfrecord'
-    generate_from_coco_json(basedir, year, output_filenames)
+    year = 'val2017'
+    c = COCODetection(basedir, year)
+    c.load()
+    result = json.load(open("./result.json"))
+    c.eval_inference_results(result)
+    # roidbs = c.training_roidbs()
+    # output_txt = "./data/infer.txt"
+    # file_handle = open(output_txt, "w")
+    # for idx, ele in enumerate(roidbs):
+    #     file_handle.write(ele["file_name"] + " " + str(ele["image_id"]) + "\n")
+    # file_handle.close()
+    #output_filenames = '/home/admin-seu/TempData/sss/Master_work/data/eval_train2017.tfrecord'
+    #generate_from_coco_json(basedir, year, output_filenames)
     #roidbs = c.load(add_gt=True, add_mask=False)
+    
     #for ele in roidbs[:100]:
     #    print(ele)
     #    print()

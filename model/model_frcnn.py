@@ -7,7 +7,7 @@ from tensorflow import keras
 from tensorflow.contrib.framework import sort
 from config.config import _C
 from util.box_ops import tf_iou
-from custom_op.ops import group_normalization
+from custom_op.ops import group_normalization, batch_normalization
 from .model_box import decode_bbox_target, encode_bbox_target
 
 
@@ -254,7 +254,8 @@ def fastrcnn_predictions(boxes, scores):
 
 def fastrcnn_2fc_head(feature):
     dim = _C.FPN.FRCNN_FC_HEAD_DIM
-    feature = keras.layers.GlobalAveragePooling2D()(feature)
+    # feature = keras.layers.GlobalAveragePooling2D()(feature)
+    feature = keras.layers.Flatten()(feature)
     hidden = keras.layers.Dense(dim, activation=tf.nn.relu, name='fc6')(feature)
     hidden = keras.layers.Dense(dim, activation=tf.nn.relu, name='fc7')(hidden)
     return hidden

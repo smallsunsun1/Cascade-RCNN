@@ -156,10 +156,10 @@ def read_img(filename, target_height, target_width):
     h = shape2d[0]
     w = shape2d[1]
     scale = tf.cast(w / h, tf.float32)
-    SHORT_IMAGE_EDGE = 800
-    # SHORT_IMAGE_EDGE = tf.cast(tf.minimum(h, w), tf.float32)
-    LONG_IMAGE_EDGE = 1312
-    # LONG_IMAGE_EDGE = tf.cast(tf.maximum(h, w), tf.float32)
+    # SHORT_IMAGE_EDGE = 800
+    SHORT_IMAGE_EDGE = tf.cast(tf.minimum(h, w), tf.float32)
+    # LONG_IMAGE_EDGE = 1312
+    LONG_IMAGE_EDGE = tf.cast(tf.maximum(h, w), tf.float32)
     def true_fn(h, w):
         scale = tf.cast(h / w, tf.float32)
         new_w = SHORT_IMAGE_EDGE
@@ -192,6 +192,61 @@ def test_input_fn(filenames, target_height, target_width):
     dataset = dataset.map(lambda x:read_img(x, target_height, target_width), num_parallel_calls=10)
     dataset = dataset.prefetch(-1)
     return dataset
+
+
+def preprocess_line(textline):
+    split_data = tf.strings.split([textline]).values
+    filename = split_data[0]
+    image_id = split_data[1]
+    content = tf.io.read_file(filename)
+    image = tf.image.decode_jpeg(content, 3)
+    original_image = image
+    image_shape = tf.shape(image)
+    shape2d = image_shape[:2]
+    h = shape2d[0]
+    w = shape2d[1]
+    scale = tf.cast(w / h, tf.float32)
+    SHORT_IMAGE_EDGE = 800
+    # SHORT_IMAGE_EDGE = tf.cast(tf.minimum(h, w), tf.float32)
+    LONG_IMAGE_EDGE = 1312
+    # LONG_IMAGE_EDGE = tf.cast(tf.maximum(h, w), tf.float32)
+
+    def true_fn(h, w):
+        scale = tf.cast(h / w, tf.float32)
+        new_w = SHORT_IMAGE_EDGE
+        new_h = tf.minimum(new_w * scale // 32 * 32, LONG_IMAGE_EDGE)
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+
+    def false_fn(h, w):
+        scale = tf.cast(w / h, tf.float32)
+        new_h = SHORT_IMAGE_EDGE
+        new_w = tf.minimum(new_h * scale // 32 * 32, LONG_IMAGE_EDGE)
+        return tf.cast(new_h, tf.int32), tf.cast(new_w, tf.int32)
+
+    # new_height = target_height
+    # new_widtht = target_width
+    # new_height = tf.random.uniform([], 600, 800, tf.int32) // 32 * 32
+    # new_width = tf.minimum(tf.cast(tf.cast(new_height, tf.float32) * scale, tf.int32), 1333) // 32 * 32
+    new_height, new_width = tf.cond(tf.greater(h, w), lambda: true_fn(h, w), lambda: false_fn(h, w))
+    image = tf.image.resize_image_with_pad(image, new_height, new_width)
+    features = {}
+    features['image'] = tf.expand_dims(image, 0)
+    features['original_image'] = original_image
+    features['h_pre'] = h
+    features['w_pre'] = w
+    features['h_now'] = new_height
+    features['w_now'] = new_width
+    features['scale'] = scale
+    features["image_id"] = image_id
+    return features
+
+
+def eval_input_fn(filenames):
+    dataset = tf.data.TextLineDataset(filenames)
+    dataset = dataset.map(preprocess_line, num_parallel_calls=10)
+    dataset = dataset.prefetch(-1)
+    return dataset
+
 
 
 
