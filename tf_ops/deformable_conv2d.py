@@ -78,6 +78,7 @@ def _deformable_conv2d_back_prop(op, grad):
 
 
 if __name__ == '__main__':
+    tf.enable_eager_execution()
     height = 10
     width = 5
     kernel_h = 3
@@ -106,9 +107,9 @@ if __name__ == '__main__':
             padding=padding,
             data_format='NCHW',
             dilations=[1, 1, 1, 1])
-        conv2d = tf.nn.conv2d(input, filter, [1, 1, 1, 1], padding, data_format='NCHW')
+        #conv2d = tf.nn.conv2d(input, filter, [1, 1, 1, 1], padding, data_format='NCHW')
         grad1 = tape.gradient(result, input)
-        grad2 = tape.gradient(conv2d, input)
+        #grad2 = tape.gradient(conv2d, input)
         print(input)
         print(grad1)
-        print(grad2) 
+        #print(grad2) 

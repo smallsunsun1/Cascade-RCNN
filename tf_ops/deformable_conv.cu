@@ -1020,9 +1020,9 @@ class CublasScratchAllocator : public se::ScratchAllocator {
 
   CublasScratchAllocator(OpKernelContext* context) : context_(context) {}
 
-  int64 GetMemoryLimitInBytes() override { return -1; }
+  int64 GetMemoryLimitInBytes(Stream*) override { return -1; }
 
-  se::port::StatusOr<DeviceMemoryBytes> AllocateBytes(int64 byte_size) override {
+  se::port::StatusOr<DeviceMemoryBytes> AllocateBytes(int64 byte_size)  {
     Tensor temporary_memory;
 
     Status allocation_status(context_->allocate_temp(
@@ -1041,7 +1041,7 @@ class CublasScratchAllocator : public se::ScratchAllocator {
   }
 
   se::port::StatusOr<DeviceMemoryBytes> AllocateBytes(
-      Stream* stream, int64 byte_size) {
+      Stream* stream, int64 byte_size) override {
     Tensor temporary_memory;
 
     Status allocation_status(context_->allocate_temp(
