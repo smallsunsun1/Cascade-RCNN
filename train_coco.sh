@@ -3,4 +3,4 @@ python train.py --train_filename="/home/admin-seu/TempData/sss/Master_work/data/
   --test_filename="/home/admin-seu/TempData/sss/Master_work/data/infer.txt" \
   --model=fpn \
   --gpus=3 \
-  --model_dir="./fpn_cascade_coco_model_sharedhead_v1_0117"
+  --model_dir="./fpn_cascade_coco_model_sharedhead_v1_0126"

@@ -226,7 +226,7 @@ def resnet_fpn_model_fn(features, labels, mode, params):
         total_cost = tf.add(total_cost, weight_loss, 'all_total_cost')
         if is_train:
             learning_rate = tf.train.piecewise_constant(global_step, lr_schedule,
-                                                        values=[tf.convert_to_tensor(0.01 * 0.33 * 0.5, tf.float32)] + [
+                                                        values=[tf.convert_to_tensor(0.01 * 0.33 * 0.375, tf.float32)] + [
                                                             learning_rate * (0.1 ** i) for i in
                                                             range(len(lr_schedule))])
             tf.summary.scalar("learning_rate", learning_rate)
@@ -255,17 +255,21 @@ def resnet_fpn_model_fn(features, labels, mode, params):
                        'h_now': features['h_now'],
                        'w_now': features['w_now'],
                        'scale': features['scale'],
-                       'image_id': features.get('image_id')
+                       # 'image_id': features.get('image_id')
                       }
         return tf.estimator.EstimatorSpec(mode, predictions)
 
 model_dict = {"rpn": resnet_c4_model_fn,
               "fpn": resnet_fpn_model_fn}
 
+
+# input = tf.placeholder(dtype=tf.float32, shape=[None, None, 3],
+#                                  name="input")
+# input = tf.squeeze(input, axis=0)
 def serve_input_fn():
-    input = tf.placeholder(dtype=tf.float32, shape=[None, None, 3],
-                                     name="input")
-    # input = tf.squeeze(input, axis=0)
+    string_input_data = tf.placeholder(dtype=tf.string, shape=(), name="input")
+    string_input = tf.io.decode_base64(string_input_data)
+    input = tf.image.decode_jpeg(string_input)
     image_shape = tf.shape(input)
     shape2d = image_shape[:2]
     h = shape2d[0]
@@ -289,13 +293,14 @@ def serve_input_fn():
     image = tf.image.resize_image_with_pad(input, new_height, new_width)
     features = {}
     features['image'] = tf.expand_dims(image, 0)
+    features['image'].set_shape([1, None, None, 3])
     features['original_image'] = image_shape
     features['h_pre'] = h
     features['w_pre'] = w
     features['h_now'] = new_height
     features['w_now'] = new_width
     features['scale'] = scale
-    return tf.estimator.export.ServingInputReceiver(features, input)
+    return tf.estimator.export.ServingInputReceiver(features, string_input_data)
 
 
 if __name__ == "__main__":
@@ -334,19 +339,21 @@ if __name__ == "__main__":
         session_configs = tf.ConfigProto(allow_soft_placement=True)
         session_configs.gpu_options.allow_growth = True
         config = tf.estimator.RunConfig(train_distribute=strategy, session_config=session_configs,
-                                        log_step_count_steps=100, save_checkpoints_steps=10000,
-                                        eval_distribute=strategy, save_summary_steps=500)
+                                        log_step_count_steps=100, save_checkpoints_steps=20000,
+                                        eval_distribute=strategy, save_summary_steps=1000)
         estimator = tf.estimator.Estimator(model_dict[args.model], args.model_dir, config,
                                            params)
     else:
-        config = tf.estimator.RunConfig(save_checkpoints_steps=10000, save_summary_steps=500, log_step_count_steps=100)
+        config = tf.estimator.RunConfig(save_checkpoints_steps=20000, save_summary_steps=1000, log_step_count_steps=100)
         estimator = tf.estimator.Estimator(model_dict[args.model], args.model_fir, config,
                                            params)
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=None)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
-    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-    #estimator.export_saved_model("./export_model", serve_input_fn)
-    res = estimator.predict(lambda: eval_input_fn(args.test_filename), yield_single_examples=False)
+    # tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+    estimator.export_saved_model("./export_model", serve_input_fn)
+
+    """
+    # res = estimator.predict(lambda: eval_input_fn(args.test_filename), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
     score_thresh = 0.5
     total_steps = 5000
@@ -355,8 +362,8 @@ if __name__ == "__main__":
     json_file = open(output_json_file, 'w')
     total_res = []
     for idx, ele in enumerate(res):
-        image = ele["original_image"].astype(np.uint8)
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        # image = ele["original_image"].astype(np.uint8)
+        # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         print("current image index: ", idx)
         # print("boxes: ", ele["boxes"])
         # print("labels: ", ele["labels"])
@@ -371,10 +378,10 @@ if __name__ == "__main__":
             info_dict["bbox"] = [float(box[0]), float(box[1]), float(box[2] - box[0]), float(box[3] - box[1])]
             info_dict["score"] = float(ele["scores"][num_idx])
             total_res.append(info_dict)
-            cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-            cv2.putText(image, '{}: {:.2}'.format(ele["labels"][num_idx], round(ele["scores"][num_idx], 2)), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1)
+            # cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
+            # cv2.putText(image, '{}: {:.2}'.format(ele["labels"][num_idx], round(ele["scores"][num_idx], 2)), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1)
 
-        cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
+        # cv2.imwrite("./detect_result/{}.jpg".format(idx), image)
         #print("boxes: ", ele["boxes"])
         #print("labels: ", ele["labels"])
         #print("scores: ", ele["scores"])
@@ -386,4 +393,5 @@ if __name__ == "__main__":
     json.dump(total_res, json_file)
     end = time.time()
     print((end - start) / total_steps)
+    """
 
