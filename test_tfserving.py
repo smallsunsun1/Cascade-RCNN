@@ -1,6 +1,6 @@
 import requests
 import json
-import io
+import time
 import cv2
 import tensorflow as tf
 import numpy as np
@@ -34,30 +34,37 @@ def map_boxes_back(boxes, features):
 
 
 url = "http://121.248.54.238:8501/v1/models/cascade_rcnn:predict"
-data = open("/Users/sunjiahe/PycharmProjects/CycleGan/MergePic/timg.jpeg", 'rb').read()
+filename = "/Users/sunjiahe/PycharmProjects/CycleGan/MergePic/timg.jpeg"
+data = open(filename, 'rb').read()
+image = np.asarray(bytearray(data), dtype="uint8")
+image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+print(np.shape(image))
 encode = base64.urlsafe_b64encode(data)
 encode = str(encode, encoding='utf-8')
 image_in = {"input": encode}
 value = {"inputs": image_in}
+start = time.time()
 response = requests.post(url, json=value)
 res = json.loads(response.content)
 res = res["outputs"]
+end = time.time()
+print(end - start)
 
-total_res = []
-score_thresh = 0.5
-res["boxes"] = np.asarray(res["boxes"])
+# total_res = []
+# score_thresh = 0.5
+# res["boxes"] = np.asarray(res["boxes"])
+# print(np.shape(res["boxes"]))
+# print(np.shape(res["scores"]))
 # res["boxes"] = map_boxes_back(res["boxes"], res)
-image = np.squeeze(np.asarray(res["image"]), axis=0).astype(np.uint8)
-image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-for num_idx, box in enumerate(res["boxes"]):
-    if res["scores"][num_idx] < score_thresh:
-        continue
-    info_dict = {}
-    info_dict["image_id"] = int(res["image_id"])
-    info_dict["category_id"] = int(res["labels"][num_idx])
-    info_dict["bbox"] = [float(box[0]), float(box[1]), float(box[2] - box[0]), float(box[3] - box[1])]
-    info_dict["score"] = float(res["scores"][num_idx])
-    total_res.append(info_dict)
-    cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
-    cv2.putText(image, '{}: {:.2}'.format(res["labels"][num_idx], round(res["scores"][num_idx], 2)), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1)
-cv2.imwrite("./res.jpg", image)
+# for num_idx, box in enumerate(res["boxes"]):
+#     if res["scores"][num_idx] < score_thresh:
+#         continue
+#     info_dict = {}
+#     info_dict["image_id"] = int(res["image_id"])
+#     info_dict["category_id"] = int(res["labels"][num_idx])
+#     info_dict["bbox"] = [float(box[0]), float(box[1]), float(box[2] - box[0]), float(box[3] - box[1])]
+#     info_dict["score"] = float(res["scores"][num_idx])
+#     total_res.append(info_dict)
+#     cv2.rectangle(image, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 2)
+#     cv2.putText(image, '{}: {:.2}'.format(res["labels"][num_idx], round(res["scores"][num_idx], 2)), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1)
+# cv2.imwrite("./res.jpg", image)
