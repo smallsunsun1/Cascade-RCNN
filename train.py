@@ -32,21 +32,16 @@ def map_boxes_back(boxes, features):
     w_pre = features['w_pre']
     h_now = features['h_now']
     w_now = features['w_now']
-    scale = features['scale']  
-    scale_now = w_now / h_now
+    scale = features['scale']
     if scale > 1:
         true_h = w_now / scale
         pad_h_top = (h_now - true_h) // 2
-        pad_h_bottom = h_now - true_h - pad_h_top
         pad_w_left = 0
-        pad_w_right = 0
         true_w = w_now
     else:
         true_w = h_now * scale
         pad_w_left = (w_now - true_w) // 2
-        pad_w_right = w_now - true_w - pad_w_left
         pad_h_top = 0
-        pad_h_bottom = 0
         true_h = h_now
     boxes[:, 0] = boxes[:, 0] - pad_w_left
     boxes[:, 1] = boxes[:, 1] - pad_h_top
@@ -208,8 +203,8 @@ def resnet_fpn_model_fn(features, labels, mode, params):
     decoded_boxes = fastrcnn_head.decoded_output_boxes()
     decoded_boxes = clip_boxes(decoded_boxes, image_shape2d)
     label_scores = fastrcnn_head.output_scores()
-    final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
-    #final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
+    # final_boxes, final_scores, final_labels = fastrcnn_predictions(decoded_boxes, label_scores)
+    final_boxes, final_scores, final_labels, valid_detections = fastrcnn_predictions_v2(decoded_boxes, label_scores)
     global_step = tf.train.get_or_create_global_step()
     if mode != tf.estimator.ModeKeys.PREDICT:
         all_losses = fastrcnn_head.losses()
@@ -240,23 +235,30 @@ def resnet_fpn_model_fn(features, labels, mode, params):
         else:
             return tf.estimator.EstimatorSpec(mode, loss=total_cost)
     else:
-        #predictions = {'boxes': final_boxes[0, :valid_detections[0]],
-        #               'labels': final_labels[0, :valid_detections[0]],
-        #               'scores': final_scores[0, :valid_detections[0]],
-        #               'image': features['image'],
-        #               'valid_detection': valid_detections}
-        predictions = {'boxes': final_boxes,
-                       'labels': final_labels,
-                       'scores': final_scores,
-                       'image': features['image'],
+        predictions = {'boxes': final_boxes[0, :valid_detections[0]],
+                      'labels': final_labels[0, :valid_detections[0]],
+                      'scores': final_scores[0, :valid_detections[0]],
+                      'image': features['image'],
                        'original_image': features['original_image'],
                        'h_pre': features['h_pre'],
                        'w_pre': features['w_pre'],
                        'h_now': features['h_now'],
                        'w_now': features['w_now'],
                        'scale': features['scale'],
-                       # 'image_id': features.get('image_id')
-                      }
+                       'image_id': features.get('image_id', tf.convert_to_tensor(0)),
+                      'valid_detection': valid_detections}
+        # predictions = {'boxes': final_boxes,
+        #                'labels': final_labels,
+        #                'scores': final_scores,
+        #                'image': features['image'],
+        #                'original_image': features['original_image'],
+        #                'h_pre': features['h_pre'],
+        #                'w_pre': features['w_pre'],
+        #                'h_now': features['h_now'],
+        #                'w_now': features['w_now'],
+        #                'scale': features['scale'],
+        #                'image_id': features.get('image_id', tf.convert_to_tensor(0))
+        #               }
         return tf.estimator.EstimatorSpec(mode, predictions)
 
 model_dict = {"rpn": resnet_c4_model_fn,
@@ -339,21 +341,21 @@ if __name__ == "__main__":
         session_configs = tf.ConfigProto(allow_soft_placement=True)
         session_configs.gpu_options.allow_growth = True
         config = tf.estimator.RunConfig(train_distribute=strategy, session_config=session_configs,
-                                        log_step_count_steps=100, save_checkpoints_steps=20000,
+                                        log_step_count_steps=100, save_checkpoints_steps=40000,
                                         eval_distribute=strategy, save_summary_steps=1000)
         estimator = tf.estimator.Estimator(model_dict[args.model], args.model_dir, config,
                                            params)
     else:
-        config = tf.estimator.RunConfig(save_checkpoints_steps=20000, save_summary_steps=1000, log_step_count_steps=100)
+        config = tf.estimator.RunConfig(save_checkpoints_steps=40000, save_summary_steps=1000, log_step_count_steps=100)
         estimator = tf.estimator.Estimator(model_dict[args.model], args.model_fir, config,
                                            params)
     train_spec = tf.estimator.TrainSpec(lambda: input_fn(args.train_filename, True, _C.MODE_FPN), max_steps=None)
     eval_spec = tf.estimator.EvalSpec(lambda: input_fn(args.eval_filename, False, _C.MODE_FPN), steps=1000)
     # tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-    estimator.export_saved_model("./export_model", serve_input_fn)
+    estimator.export_saved_model("./export_model_0126", serve_input_fn)
 
     """
-    # res = estimator.predict(lambda: eval_input_fn(args.test_filename), yield_single_examples=False)
+    res = estimator.predict(lambda: eval_input_fn(args.test_filename), yield_single_examples=False)
     # res = estimator.predict(lambda :input_fn(args.eval_filename, False), yield_single_examples=False)
     score_thresh = 0.5
     total_steps = 5000
@@ -394,4 +396,5 @@ if __name__ == "__main__":
     end = time.time()
     print((end - start) / total_steps)
     """
+
 
